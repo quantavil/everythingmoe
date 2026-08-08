@@ -424,7 +424,7 @@
     font-family: var(--font-mono);
     text-transform: uppercase;
     color: var(--color-amber);
-    min-width: 130px;
+    min-width: 140px;
     letter-spacing: 0.5px;
     flex-shrink: 0;
   }
@@ -432,7 +432,7 @@
   .filter-group-chips {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
   }
 

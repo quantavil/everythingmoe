@@ -153,22 +153,27 @@ export async function fetchEverythingMoeData(): Promise<{ sites: SiteItem[]; sec
       || neg.some(n => /dead|shutdown|discontinued|defunct|offline|closed|shut down/i.test(n))
       || /discontinued|shut down|no longer active|permanently closed|dead site/i.test(info);
 
-    if (domains.length > 0) {
+    if (!altlinks.length && domains.length > 0) {
       for (const d of domains) {
         const clean = d.replace(/^https?:\/\//i, '').trim();
         if (clean.includes('.') && !altlinks.some(l => l.url.includes(clean))) {
-          altlinks.unshift({ label: clean, url: d.startsWith('http') ? d : `https://${clean}` });
+          altlinks.push({ label: clean, url: d.startsWith('http') ? d : `https://${clean}` });
         }
       }
     }
 
-    for (const ex of exAlt) {
-      if (!altlinks.some(l => l.url === ex.url)) altlinks.push(ex);
+    if (!altlinks.length && exAlt.length > 0) {
+      for (const ex of exAlt) {
+        if (!altlinks.some(l => l.url === ex.url)) altlinks.push(ex);
+      }
     }
 
-    if (!altlinks.length && domains.length > 0) {
-      const d = domains[0];
-      altlinks.push({ label: d, url: d.startsWith('http') ? d : `https://${d}` });
+    if (!altlinks.length) {
+      if (!isDead) {
+        const cleanKey = cleanIconId(key);
+        const defaultDomain = `${cleanKey}.com`;
+        altlinks.push({ label: defaultDomain, url: `https://${defaultDomain}` });
+      }
     }
 
     sites.push({

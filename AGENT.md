@@ -27,6 +27,8 @@ Ultra-fast, zero-dependency Otaku resource directory indexing 1,200+ main & low-
 - 5-minute `healthCache` backed by `sessionStorage` eliminates repetitive network traffic on scroll/refresh, bypassable via `.recheck-health-btn`.
 - Synchronous `getCachedSiteHealth` check in card components renders status badges instantly without triggering `IntersectionObserver` on cached cards.
 - Unified `getFilteredSites()` pipeline ensures Bookmarks and Dead tab counts match active query, tag, lowsec, and NSFW filters consistently.
+- Multi-tier `probeImage` includes Google s2 favicon fallback to resolve live status for Cloudflare socket-closing domains (`animepahe.com`, `animepahe.org`).
+- Synthesized domain fallback (`https://${cleanKey}.com`) for active sites lacking `altlink` in upstream dataset (e.g., `anidbstream`, `anizone`), ensuring all live sites render mirror links.
 
 ## Blunders Log
 - **Blunder**: `Boolean(item['ex-DEAD'])` coercing string `"0"` or `"false"` to `true`.
@@ -53,3 +55,4 @@ Ultra-fast, zero-dependency Otaku resource directory indexing 1,200+ main & low-
 - Deleted `mock_redesign.html` (1,033 lines) prototype file.
 - Created `src/__tests__/pipeline.test.ts` to test filter pipeline (`getFilteredSites`).
 - Added NSFW toggle state and `--radius-pill` design token to CSS design system.
+- Shortened and ordered `Features & Access` filter chips to fit inline on a single row without wrapping.

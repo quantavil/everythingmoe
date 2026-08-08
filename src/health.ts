@@ -111,28 +111,33 @@ class ConcurrencyQueue {
 const healthCheckQueue = new ConcurrencyQueue(5);
 const siteCheckQueue = new ConcurrencyQueue(4);
 
-/** Favicon probe — reachability heuristic only (not proof the site works). */
+/** Favicon & DNS probe — multi-tier reachability heuristic. */
 async function probeImage(url: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<boolean> {
   return new Promise(resolve => {
     try {
       const parsed = new URL(url);
-      const img = new Image();
       let done = false;
       const finish = (ok: boolean) => {
         if (done) return;
         done = true;
-        img.onload = img.onerror = null;
         resolve(ok);
       };
       const timer = setTimeout(() => finish(false), timeoutMs);
-      img.onload = () => { clearTimeout(timer); finish(true); };
-      img.onerror = () => {
-        const fallbackImg = new Image();
-        fallbackImg.onload = () => { clearTimeout(timer); finish(true); };
-        fallbackImg.onerror = () => { clearTimeout(timer); finish(false); };
-        fallbackImg.src = `${parsed.origin}/favicon.png?_t=${Date.now()}`;
+
+      const img1 = new Image();
+      img1.onload = () => { clearTimeout(timer); finish(true); };
+      img1.onerror = () => {
+        const img2 = new Image();
+        img2.onload = () => { clearTimeout(timer); finish(true); };
+        img2.onerror = () => {
+          const img3 = new Image();
+          img3.onload = () => { clearTimeout(timer); finish(true); };
+          img3.onerror = () => { clearTimeout(timer); finish(false); };
+          img3.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(parsed.hostname)}&sz=32&_t=${Date.now()}`;
+        };
+        img2.src = `${parsed.origin}/favicon.png?_t=${Date.now()}`;
       };
-      img.src = `${parsed.origin}/favicon.ico?_t=${Date.now()}`;
+      img1.src = `${parsed.origin}/favicon.ico?_t=${Date.now()}`;
     } catch {
       resolve(false);
     }

@@ -115,10 +115,10 @@ const FILTER_GROUPS = [
   {
     title: 'Features & Access',
     filters: [
+      { id: 'player', label: 'Custom Player', icon: () => icons.playCircle(13) },
+      { id: 'download', label: 'Downloads', icon: () => icons.download(13) },
       { id: 'large-library', label: 'Large Library', icon: () => icons.library(13) },
-      { id: 'app', label: 'Mihon / Mobile App', icon: () => icons.smartphone(13) },
-      { id: 'download', label: 'Downloads / Torrents', icon: () => icons.download(13) },
-      { id: 'player', label: 'Custom Reader/Player', icon: () => icons.playCircle(13) }
+      { id: 'app', label: 'Mobile App', icon: () => icons.smartphone(13) }
     ]
   }
 ];
