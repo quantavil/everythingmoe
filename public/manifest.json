@@ -1,0 +1,18 @@
+{
+  "name": "EverythingMoe 2.0 - Ultimate Otaku Resource Directory",
+  "short_name": "EverythingMoe",
+  "description": "The ultimate zero-bloat curated directory for anime, manga, light novels, apps, soundtracks, Japanese learning tools, and otaku resources with live mirror health checking.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0c0d12",
+  "theme_color": "#0c0d12",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
