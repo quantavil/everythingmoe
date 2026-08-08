@@ -101,9 +101,9 @@ const FILTER_GROUPS = [
   {
     title: 'Quality & Safety',
     filters: [
-      { id: 'no-ads', label: 'Clean / No Ads', icon: () => icons.shieldCheck(13) },
-      { id: 'high-quality', label: 'High Quality', icon: () => icons.sparkles(13) },
-      { id: 'direct', label: 'Fast / Low Latency', icon: () => icons.zap(13) }
+      { id: 'no-ads', label: 'No Ads', icon: () => icons.shieldCheck(13) },
+      { id: 'high-quality', label: 'HD Quality', icon: () => icons.sparkles(13) },
+      { id: 'direct', label: 'Fast Server', icon: () => icons.zap(13) }
     ]
   },
   {

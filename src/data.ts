@@ -129,7 +129,7 @@ export async function fetchLowSecForSection(secId: string): Promise<SiteItem[]> 
       section: secId,
       categoryName: `${categoryTitle} (Low-Ranked)`,
       positive: filters,
-      negative: ['Lower Security / Unverified'],
+      negative: ['Low Security'],
       info: tagsText ? `Tags: ${tagsText}` : 'Lower-ranked site listing.',
       altlinks: [{ label: host || item.title!, url: item.link! }],
       domains: host ? [host] : [],
