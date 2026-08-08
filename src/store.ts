@@ -57,10 +57,10 @@ export function setSavedLowSec(enabled: boolean) {
   setItem(KEYS.lowsec, String(enabled));
 }
 
-/** Adult categories hidden by default */
+/** Adult categories visible by default */
 export function getSavedHideNsfw(): boolean {
   const saved = getItem(KEYS.nsfw);
-  return saved !== null ? saved === 'true' : true;
+  return saved !== null ? saved === 'true' : false;
 }
 
 export function setSavedHideNsfw(hidden: boolean) {

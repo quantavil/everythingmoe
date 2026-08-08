@@ -229,7 +229,7 @@ function buildShellHTML() {
           <button class="btn btn-icon ${showLowSec ? 'btn-primary' : ''}" id="lowsec-toggle-btn" title="${showLowSec ? 'Low-Ranked Sites Enabled (Click to hide)' : 'Low-Ranked Sites Disabled (Click to show)'}" aria-label="Toggle Low-Ranked Sites">
             ${showLowSec ? icons.shieldAlert(18) : icons.alert(18)}
           </button>
-          <button class="btn btn-icon ${hideNsfw ? '' : 'btn-primary'}" id="nsfw-toggle-btn" title="${hideNsfw ? 'NSFW Categories Hidden (Click to show 18+)' : 'NSFW Categories Visible (Click to hide)'}" aria-label="Toggle NSFW Categories">
+          <button class="btn btn-icon" id="nsfw-toggle-btn" title="${hideNsfw ? 'NSFW Categories Hidden (Click to show 18+)' : 'NSFW Categories Visible (Click to hide)'}" aria-label="Toggle NSFW Categories">
             ${icons.flame(18)}
           </button>
           <button class="btn btn-icon" id="theme-toggle-btn" title="Toggle Theme" aria-label="Toggle Theme">${theme === 'dark' ? icons.sun(18) : icons.moon(18)}</button>
@@ -340,7 +340,7 @@ function updateHeaderButtons() {
 
   const nsfwBtn = document.getElementById('nsfw-toggle-btn');
   if (nsfwBtn) {
-    nsfwBtn.className = `btn btn-icon ${hideNsfw ? '' : 'btn-primary'}`;
+    nsfwBtn.className = 'btn btn-icon';
     nsfwBtn.setAttribute('title', hideNsfw ? 'NSFW Categories Hidden (Click to show 18+)' : 'NSFW Categories Visible (Click to hide)');
   }
 
@@ -739,7 +739,7 @@ async function init() {
   if (!appEl) return;
 
   setSavedTheme(getSavedTheme());
-  renderSkeletonState(appEl, searchQuery, showLowSec, getSavedTheme(), hideNsfw);
+  renderSkeletonState(appEl, searchQuery, showLowSec, getSavedTheme());
 
   try {
     const data = await fetchEverythingMoeData();
