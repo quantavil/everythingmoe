@@ -739,7 +739,7 @@ async function init() {
   if (!appEl) return;
 
   setSavedTheme(getSavedTheme());
-  renderSkeletonState(appEl, searchQuery, showLowSec, getSavedTheme());
+  renderSkeletonState(appEl, searchQuery, showLowSec, getSavedTheme(), hideNsfw);
 
   try {
     const data = await fetchEverythingMoeData();

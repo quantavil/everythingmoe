@@ -75,7 +75,7 @@ export function renderSkeletonCard(): string {
   `;
 }
 
-export function renderSkeletonState(appEl: HTMLElement, query: string, lowsec: boolean, theme: string) {
+export function renderSkeletonState(appEl: HTMLElement, query: string, lowsec: boolean, theme: string, hideNsfw = true) {
   appEl.innerHTML = `
     <header class="site-header">
       <div class="header-inner">
@@ -87,6 +87,7 @@ export function renderSkeletonState(appEl: HTMLElement, query: string, lowsec: b
         </a>
         <div class="header-controls">
           <button class="btn btn-icon ${lowsec ? 'btn-primary' : ''}" id="lowsec-toggle-btn" title="Toggle Low-Ranked Sites" aria-label="Toggle Low-Ranked Sites">${lowsec ? icons.shieldAlert(18) : icons.alert(18)}</button>
+          <button class="btn btn-icon ${hideNsfw ? '' : 'btn-primary'}" id="nsfw-toggle-btn" title="Toggle NSFW Categories" aria-label="Toggle NSFW Categories">${icons.flame(18)}</button>
           <button class="btn btn-icon" id="theme-toggle-btn" title="Toggle Theme" aria-label="Toggle Theme">${theme === 'dark' ? icons.sun(18) : icons.moon(18)}</button>
           <button class="btn btn-icon" id="favorites-tab-btn" title="Bookmarks (0)" aria-label="Bookmarks (0)">${icons.star(18, false)}</button>
         </div>
@@ -96,8 +97,14 @@ export function renderSkeletonState(appEl: HTMLElement, query: string, lowsec: b
       <div class="search-box-container">
         <span class="search-icon-left">${icons.search(20)}</span>
         <input type="text" id="search-input" class="search-field" placeholder="Search 1,200+ main & low-ranked sites, softsubs, apps..." value="${escapeHtml(query)}" autocomplete="off" />
-        <div class="search-kbd-shortcut">${icons.command(12)} <span>/</span></div>
+        <div class="search-actions-right">
+          <button class="filter-toggle-btn" id="filter-toggle-btn" title="Toggle Feature Filters">
+            ${icons.filter(14)} <span>Filter</span>
+          </button>
+          <div class="search-kbd-shortcut">${icons.command(12)} <span>/</span></div>
+        </div>
       </div>
+      <div class="filter-drawer" id="filter-drawer"></div>
       <div class="search-meta-bar search-meta-center" id="search-meta-bar"><span class="search-counter">⚡ Initializing 1,200+ Otaku Resources...</span></div>
     </div>
     <nav class="category-bar" id="category-bar">${Array(8).fill(0).map(() => `<div class="cat-pill skeleton-box" style="width: 110px; height: 34px;"></div>`).join('')}</nav>
