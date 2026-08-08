@@ -3,8 +3,10 @@ import { MirrorLink } from './types';
 export interface MirrorStatusResult {
   url: string;
   label: string;
-  status: 'online' | 'offline';
+  status: 'online' | 'offline' | 'redirected';
   pingMs?: number;
+  redirectUrl?: string;
+  redirectHost?: string;
 }
 
 export interface AllMirrorsCheckResult {
@@ -15,8 +17,10 @@ export interface AllMirrorsCheckResult {
 }
 
 interface CachedHealthEntry {
-  status: 'online' | 'offline';
+  status: 'online' | 'offline' | 'redirected';
   pingMs?: number;
+  redirectUrl?: string;
+  redirectHost?: string;
   checkedAt: number;
 }
 
@@ -56,7 +60,7 @@ function saveHealthCache() {
 }
 
 const healthCache = loadHealthCache();
-const inFlightProbes = new Map<string, Promise<{ status: 'online' | 'offline'; pingMs?: number }>>();
+const inFlightProbes = new Map<string, Promise<{ status: 'online' | 'offline' | 'redirected'; pingMs?: number; redirectUrl?: string; redirectHost?: string }>>();
 
 function setHealthCache(url: string, entry: CachedHealthEntry) {
   if (healthCache.size >= 2500 && !healthCache.has(url)) {
@@ -75,10 +79,17 @@ export function getCachedSiteHealth(altlinks: MirrorLink[]): AllMirrorsCheckResu
   for (const m of altlinks) {
     const cached = healthCache.get(m.url);
     if (!cached || now - cached.checkedAt >= CACHE_TTL_MS) return null;
-    results.push({ url: m.url, label: m.label, status: cached.status, pingMs: cached.pingMs });
+    results.push({
+      url: m.url,
+      label: m.label,
+      status: cached.status,
+      pingMs: cached.pingMs,
+      redirectUrl: cached.redirectUrl,
+      redirectHost: cached.redirectHost
+    });
   }
 
-  const live = results.filter(r => r.status === 'online');
+  const live = results.filter(r => r.status === 'online' || r.status === 'redirected');
   const validPings = live.map(m => m.pingMs).filter((p): p is number => p !== undefined);
 
   return {
@@ -145,17 +156,16 @@ async function probeImage(url: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<bo
 }
 
 /**
- * Browser-side reachability estimate.
- * no-cors fetch only proves the host answered — not that the site is usable.
+ * Browser-side reachability and redirect estimate.
  */
 export async function pingUrl(
   url: string,
   forceRefresh = false
-): Promise<{ status: 'online' | 'offline'; pingMs?: number }> {
+): Promise<{ status: 'online' | 'offline' | 'redirected'; pingMs?: number; redirectUrl?: string; redirectHost?: string }> {
   if (!forceRefresh) {
     const cached = healthCache.get(url);
     if (cached && Date.now() - cached.checkedAt < CACHE_TTL_MS) {
-      return { status: cached.status, pingMs: cached.pingMs };
+      return { status: cached.status, pingMs: cached.pingMs, redirectUrl: cached.redirectUrl, redirectHost: cached.redirectHost };
     }
     const inflight = inFlightProbes.get(url);
     if (inflight) return inflight;
@@ -163,6 +173,28 @@ export async function pingUrl(
 
   const probeTask = healthCheckQueue.run(async () => {
     const start = performance.now();
+
+    // Probe Edge serverless health function first for redirect detection
+    try {
+      if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+        const edgeRes = await fetch(`/api/health?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(3000) });
+        if (edgeRes.ok) {
+          const data = await edgeRes.json();
+          if (data.status === 'online' || data.status === 'redirected') {
+            const entry: CachedHealthEntry = {
+              status: data.status,
+              pingMs: data.pingMs || Math.round(performance.now() - start),
+              redirectUrl: data.redirectUrl,
+              redirectHost: data.redirectHost,
+              checkedAt: Date.now()
+            };
+            setHealthCache(url, entry);
+            return entry;
+          }
+        }
+      }
+    } catch { /* fallback to browser probes */ }
+
     let timer: ReturnType<typeof setTimeout> | null = null;
     try {
       const controller = new AbortController();
@@ -200,11 +232,18 @@ export async function checkAllMirrorsHealth(
     const results = await Promise.all(
       altlinks.map(async m => {
         const res = await pingUrl(m.url, forceRefresh);
-        return { url: m.url, label: m.label, status: res.status, pingMs: res.pingMs };
+        return {
+          url: m.url,
+          label: m.label,
+          status: res.status,
+          pingMs: res.pingMs,
+          redirectUrl: res.redirectUrl,
+          redirectHost: res.redirectHost
+        };
       })
     );
 
-    const live = results.filter(r => r.status === 'online');
+    const live = results.filter(r => r.status === 'online' || r.status === 'redirected');
     const validPings = live.map(m => m.pingMs).filter((p): p is number => p !== undefined);
 
     return {

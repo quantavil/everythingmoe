@@ -668,8 +668,8 @@ function applyHealthResultsToCard(container: HTMLElement, res: AllMirrorsCheckRe
       const btn = mirrorBtns[mIdx] as HTMLAnchorElement | undefined;
       if (!btn) return;
 
-      btn.querySelectorAll('.mirror-dot, .mirror-ping-label').forEach(el => el.remove());
-      btn.classList.remove('mirror-offline');
+      btn.querySelectorAll('.mirror-dot, .mirror-ping-label, .mirror-redirect-label').forEach(el => el.remove());
+      btn.classList.remove('mirror-offline', 'mirror-redirected');
 
       if (mResult.status === 'online') {
         const dot = document.createElement('span');
@@ -680,6 +680,18 @@ function applyHealthResultsToCard(container: HTMLElement, res: AllMirrorsCheckRe
           pingSpan.className = 'mirror-ping-label';
           pingSpan.textContent = `${mResult.pingMs}ms`;
           btn.appendChild(pingSpan);
+        }
+      } else if (mResult.status === 'redirected') {
+        btn.classList.add('mirror-redirected');
+        const dot = document.createElement('span');
+        dot.className = 'mirror-dot redirected';
+        btn.appendChild(dot);
+        if (mResult.redirectHost) {
+          const redirSpan = document.createElement('span');
+          redirSpan.className = 'mirror-redirect-label';
+          redirSpan.textContent = `➔ ${mResult.redirectHost}`;
+          btn.appendChild(redirSpan);
+          btn.title = `Redirects to ${mResult.redirectHost}`;
         }
       } else {
         btn.classList.add('mirror-offline');

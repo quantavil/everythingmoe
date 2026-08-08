@@ -6,6 +6,7 @@ Ultra-fast, zero-dependency Otaku resource directory indexing 1,200+ main & low-
 ## Project Structure
 - `functions/api/dataset.ts` - Cloudflare Pages serverless proxy for `/api/dataset` with 10-min Edge CDN caching.
 - `functions/api/lowsec.ts` - Cloudflare Pages serverless proxy for category-specific low-ranked site sub-indexes.
+- `functions/api/health.ts` - Cloudflare Pages serverless proxy for edge health checking and domain redirect detection.
 - `src/main.ts` - Entry point orchestrating search filtering, category updates, tag filters, and `IntersectionObserver` health probes.
 - `src/components.ts` - Grid card component (`renderGridCard`), skeleton loading template (`renderSkeletonState`), site icon rendering, and health refresh control.
 - `src/health.ts` - 5-minute health cache (`healthCache`), `fetch()` GET + `Image` favicon fallback probes, and concurrency-queued mirror checker.

@@ -964,10 +964,23 @@
       border-color: var(--border-dim);
     }
 
+    &.mirror-redirected {
+      border-color: var(--color-amber);
+      color: var(--text-primary);
+    }
+
     &:hover {
       background-color: var(--bg-surface-hover);
       border-color: var(--border-active);
     }
+  }
+
+  .mirror-redirect-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-amber);
+    margin-inline-start: 4px;
+    font-family: var(--font-mono);
   }
 
   .mirror-dot {
@@ -981,6 +994,11 @@
       background-color: #10b981;
       box-shadow: 0 0 6px rgba(16, 185, 129, 0.8);
       animation: dot-pulse 2.2s infinite ease-in-out;
+    }
+
+    &.redirected {
+      background-color: var(--color-amber);
+      box-shadow: 0 0 6px rgba(245, 158, 11, 0.7);
     }
 
     &.offline {

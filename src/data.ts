@@ -126,6 +126,12 @@ export async function fetchAllLowSec(): Promise<SiteItem[]> {
   return (await Promise.all(ids.map(fetchLowSecForSection))).flat();
 }
 
+const KNOWN_PRIMARY_DOMAINS: Record<string, { label: string; url: string }> = {
+  reanime: { label: '.to', url: 'https://reanime.to/home' },
+  anizone: { label: '.to', url: 'https://anizone.to' },
+  anidbstream: { label: 'anidbstream.com', url: 'https://anidbstream.com' }
+};
+
 export async function fetchEverythingMoeData(): Promise<{ sites: SiteItem[]; sections: SectionMeta[] }> {
   const rawMain = await fetchJson<Record<string, any>>(['/api/dataset', `${UPSTREAM_DATA_URL}/dataset.json`], {});
   const sites: SiteItem[] = [];
@@ -153,6 +159,16 @@ export async function fetchEverythingMoeData(): Promise<{ sites: SiteItem[]; sec
       || neg.some(n => /dead|shutdown|discontinued|defunct|offline|closed|shut down/i.test(n))
       || /discontinued|shut down|no longer active|permanently closed|dead site/i.test(info);
 
+    const lowerKey = key.toLowerCase();
+    const cleanKey = cleanIconId(key);
+
+    if (KNOWN_PRIMARY_DOMAINS[lowerKey]) {
+      const known = KNOWN_PRIMARY_DOMAINS[lowerKey];
+      if (!altlinks.some(l => l.url === known.url)) {
+        altlinks.unshift(known);
+      }
+    }
+
     if (!altlinks.length && domains.length > 0) {
       for (const d of domains) {
         const clean = d.replace(/^https?:\/\//i, '').trim();
@@ -170,7 +186,6 @@ export async function fetchEverythingMoeData(): Promise<{ sites: SiteItem[]; sec
 
     if (!altlinks.length) {
       if (!isDead) {
-        const cleanKey = cleanIconId(key);
         const defaultDomain = `${cleanKey}.com`;
         altlinks.push({ label: defaultDomain, url: `https://${defaultDomain}` });
       }

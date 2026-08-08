@@ -47,6 +47,10 @@ function renderStatusControl(site: IndexedSiteItem, cached: AllMirrorsCheckResul
 
 function renderDot(res?: MirrorStatusResult): string {
   if (!res) return '';
+  if (res.status === 'redirected') {
+    const target = res.redirectHost ? `<span class="mirror-redirect-label">➔ ${escapeHtml(res.redirectHost)}</span>` : '';
+    return `<span class="mirror-dot redirected"></span>${target}`;
+  }
   const ping = res.pingMs ? `<span class="mirror-ping-label">${res.pingMs}ms</span>` : '';
   return `<span class="mirror-dot ${res.status}"></span>${ping}`;
 }
@@ -132,7 +136,10 @@ export function renderGridCard(site: IndexedSiteItem, isBookmarked: boolean, ind
   const neg = site.negative.slice(0, 3).map(n => `<span class="tag-badge negative">${icons.alert(11)} ${escapeHtml(n)}</span>`).join('');
   const mirrors = site.altlinks.map((alt, idx) => {
     const mRes = cached?.mirrors.find(m => m.url === alt.url);
-    return `<a href="${escapeUrl(alt.url)}" target="_blank" rel="noopener noreferrer" class="mirror-button ${idx === 0 ? 'primary-mirror' : ''} ${mRes && mRes.status !== 'online' ? 'mirror-offline' : ''}">${idx === 0 ? icons.externalLink(12) : ''} ${escapeHtml(alt.label || 'Link')} ${renderDot(mRes)}</a>`;
+    const isOffline = mRes && mRes.status === 'offline';
+    const isRedirected = mRes && mRes.status === 'redirected';
+    const titleAttr = isRedirected && mRes.redirectHost ? `title="Redirects to ${escapeHtml(mRes.redirectHost)}"` : '';
+    return `<a href="${escapeUrl(alt.url)}" target="_blank" rel="noopener noreferrer" class="mirror-button ${idx === 0 ? 'primary-mirror' : ''} ${isOffline ? 'mirror-offline' : ''} ${isRedirected ? 'mirror-redirected' : ''}" ${titleAttr}>${idx === 0 ? icons.externalLink(12) : ''} ${escapeHtml(alt.label || 'Link')} ${renderDot(mRes)}</a>`;
   }).join('');
 
   return `
