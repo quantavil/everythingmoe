@@ -87,7 +87,6 @@ export function renderSkeletonState(appEl: HTMLElement, query: string, lowsec: b
         </a>
         <div class="header-controls">
           <button class="btn btn-icon ${lowsec ? 'btn-primary' : ''}" id="lowsec-toggle-btn" title="Toggle Low-Ranked Sites" aria-label="Toggle Low-Ranked Sites">${lowsec ? icons.shieldAlert(18) : icons.alert(18)}</button>
-          <button class="btn btn-icon" id="nsfw-toggle-btn" title="Toggle NSFW Categories" aria-label="Toggle NSFW Categories">${icons.flame(18)}</button>
           <button class="btn btn-icon" id="theme-toggle-btn" title="Toggle Theme" aria-label="Toggle Theme">${theme === 'dark' ? icons.sun(18) : icons.moon(18)}</button>
           <button class="btn btn-icon" id="favorites-tab-btn" title="Bookmarks (0)" aria-label="Bookmarks (0)">${icons.star(18, false)}</button>
         </div>

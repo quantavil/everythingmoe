@@ -1,7 +1,7 @@
 import { fetchEverythingMoeData, fetchLowSecForSection, fetchAllLowSec } from './data';
 import { indexSites, searchSites, IndexedSiteItem } from './search';
-import { getBookmarks, toggleBookmark, getSavedTheme, setSavedTheme, getSavedLowSec, setSavedLowSec, getSavedHideNsfw, setSavedHideNsfw, getUrlParams, syncUrlParams } from './store';
-import { SectionMeta, MirrorLink, NSFW_SECTIONS } from './types';
+import { getBookmarks, toggleBookmark, getSavedTheme, setSavedTheme, getSavedLowSec, setSavedLowSec, getUrlParams, syncUrlParams } from './store';
+import { SectionMeta, MirrorLink } from './types';
 import { icons } from './icons';
 import { checkAllMirrorsHealth, AllMirrorsCheckResult } from './health';
 import { escapeHtml, showToast, debounce } from './ui';
@@ -29,7 +29,6 @@ if (params.section && !['all', 'favorites', 'dead'].includes(params.section)) {
 
 let searchQuery = params.query || '';
 let showLowSec = params.lowsec !== null ? params.lowsec : getSavedLowSec();
-let hideNsfw = params.hideNsfw !== null ? params.hideNsfw : getSavedHideNsfw();
 const activeTagFilters = new Set<string>(params.tags || []);
 let isFilterDrawerOpen = false;
 
@@ -39,7 +38,6 @@ export interface FilterParams {
   searchQuery?: string;
   showLowSec?: boolean;
   activeTagFilters?: Set<string>;
-  hideNsfw?: boolean;
 }
 
 export function getFilteredSites(allSites: IndexedSiteItem[], params: FilterParams): IndexedSiteItem[] {
@@ -58,10 +56,6 @@ export function getFilteredSites(allSites: IndexedSiteItem[], params: FilterPara
 
   if (!params.showLowSec) {
     sites = sites.filter(s => !s.isLowSec);
-  }
-
-  if (params.hideNsfw) {
-    sites = sites.filter(s => !NSFW_SECTIONS.has(s.section));
   }
 
   if (params.activeTagFilters && params.activeTagFilters.size > 0) {
@@ -125,8 +119,8 @@ const FILTER_GROUPS = [
 
 const getAppEl = () => typeof document !== 'undefined' ? document.getElementById('app') : null;
 
-const debouncedSyncUrl = debounce((q: string, sec: string, lowsec: boolean, tags: Set<string>, hideNsfw: boolean) => {
-  syncUrlParams(q, sec, lowsec, tags, hideNsfw);
+const debouncedSyncUrl = debounce((q: string, sec: string, lowsec: boolean, tags: Set<string>) => {
+  syncUrlParams(q, sec, lowsec, tags);
 }, 300);
 
 async function ensureLowSecLoaded(secId: string) {
@@ -193,7 +187,7 @@ function updateFilterDrawer() {
         updateCategoryBar();
         renderFilteredContent();
         const urlSec = selectedCategoryIds.size === 1 ? Array.from(selectedCategoryIds)[0] : (selectedCategoryIds.size > 1 ? Array.from(selectedCategoryIds).join(',') : activeSectionId);
-        debouncedSyncUrl(searchQuery, urlSec, showLowSec, activeTagFilters, hideNsfw);
+        debouncedSyncUrl(searchQuery, urlSec, showLowSec, activeTagFilters);
       }
     });
   });
@@ -205,7 +199,7 @@ function updateFilterDrawer() {
     updateCategoryBar();
     renderFilteredContent();
     const urlSec = selectedCategoryIds.size === 1 ? Array.from(selectedCategoryIds)[0] : (selectedCategoryIds.size > 1 ? Array.from(selectedCategoryIds).join(',') : activeSectionId);
-    debouncedSyncUrl(searchQuery, urlSec, showLowSec, activeTagFilters, hideNsfw);
+    debouncedSyncUrl(searchQuery, urlSec, showLowSec, activeTagFilters);
   });
 }
 
@@ -228,9 +222,6 @@ function buildShellHTML() {
         <div class="header-controls">
           <button class="btn btn-icon ${showLowSec ? 'btn-primary' : ''}" id="lowsec-toggle-btn" title="${showLowSec ? 'Low-Ranked Sites Enabled (Click to hide)' : 'Low-Ranked Sites Disabled (Click to show)'}" aria-label="Toggle Low-Ranked Sites">
             ${showLowSec ? icons.shieldAlert(18) : icons.alert(18)}
-          </button>
-          <button class="btn btn-icon" id="nsfw-toggle-btn" title="${hideNsfw ? 'NSFW Categories Hidden (Click to show 18+)' : 'NSFW Categories Visible (Click to hide)'}" aria-label="Toggle NSFW Categories">
-            ${icons.flame(18)}
           </button>
           <button class="btn btn-icon" id="theme-toggle-btn" title="Toggle Theme" aria-label="Toggle Theme">${theme === 'dark' ? icons.sun(18) : icons.moon(18)}</button>
           <button class="btn btn-icon ${activeSectionId === 'favorites' ? 'btn-primary' : ''}" id="favorites-tab-btn" title="Bookmarks (${bookmarks.length})" aria-label="Bookmarks (${bookmarks.length})">
@@ -266,7 +257,7 @@ function updateCategoryBar() {
   const categoryBar = document.getElementById('category-bar');
   if (!categoryBar) return;
 
-  const baseFilter = { searchQuery, showLowSec, activeTagFilters, hideNsfw };
+  const baseFilter = { searchQuery, showLowSec, activeTagFilters };
   const allCount = getFilteredSites(allSites, { ...baseFilter, sectionId: 'all' }).length;
   const favCount = getFilteredSites(allSites, { ...baseFilter, sectionId: 'favorites' }).length;
   const deadCount = getFilteredSites(allSites, { ...baseFilter, sectionId: 'dead' }).length;
@@ -324,7 +315,7 @@ function updateCategoryBar() {
           ensureLowSecLoaded(section);
         }
         const urlSec = selectedCategoryIds.size === 1 ? Array.from(selectedCategoryIds)[0] : (selectedCategoryIds.size > 1 ? Array.from(selectedCategoryIds).join(',') : activeSectionId);
-        debouncedSyncUrl(searchQuery, urlSec, showLowSec, activeTagFilters, hideNsfw);
+        debouncedSyncUrl(searchQuery, urlSec, showLowSec, activeTagFilters);
       }
     });
   });
@@ -336,12 +327,6 @@ function updateHeaderButtons() {
     lowsecBtn.className = `btn btn-icon ${showLowSec ? 'btn-primary' : ''}`;
     lowsecBtn.setAttribute('title', showLowSec ? 'Low-Ranked Sites Enabled (Click to hide)' : 'Low-Ranked Sites Disabled (Click to show)');
     lowsecBtn.innerHTML = showLowSec ? icons.shieldAlert(18) : icons.alert(18);
-  }
-
-  const nsfwBtn = document.getElementById('nsfw-toggle-btn');
-  if (nsfwBtn) {
-    nsfwBtn.className = 'btn btn-icon';
-    nsfwBtn.setAttribute('title', hideNsfw ? 'NSFW Categories Hidden (Click to show 18+)' : 'NSFW Categories Visible (Click to hide)');
   }
 
   const favsBtn = document.getElementById('favorites-tab-btn');
@@ -370,8 +355,7 @@ function renderFilteredContent() {
     selectedCategoryIds,
     searchQuery,
     showLowSec,
-    activeTagFilters,
-    hideNsfw
+    activeTagFilters
   });
 
   const total = sites.length;
@@ -401,7 +385,7 @@ function renderFilteredContent() {
       updateCategoryBar();
       renderFilteredContent();
       const urlSec = selectedCategoryIds.size === 1 ? Array.from(selectedCategoryIds)[0] : (selectedCategoryIds.size > 1 ? Array.from(selectedCategoryIds).join(',') : activeSectionId);
-      syncUrlParams('', urlSec, showLowSec, activeTagFilters, hideNsfw);
+      syncUrlParams('', urlSec, showLowSec, activeTagFilters);
     });
     return;
   }
@@ -479,7 +463,7 @@ function attachStaticEventListeners() {
     updateHeaderButtons();
     updateCategoryBar();
     renderFilteredContent();
-    syncUrlParams('', 'all', showLowSec, activeTagFilters, hideNsfw);
+    syncUrlParams('', 'all', showLowSec, activeTagFilters);
   });
 
   const lowsecBtn = document.getElementById('lowsec-toggle-btn');
@@ -490,20 +474,8 @@ function attachStaticEventListeners() {
     updateCategoryBar();
     renderFilteredContent();
     const urlSec = selectedCategoryIds.size === 1 ? Array.from(selectedCategoryIds)[0] : (selectedCategoryIds.size > 1 ? Array.from(selectedCategoryIds).join(',') : activeSectionId);
-    debouncedSyncUrl(searchQuery, urlSec, showLowSec, activeTagFilters, hideNsfw);
+    debouncedSyncUrl(searchQuery, urlSec, showLowSec, activeTagFilters);
     if (showLowSec) ensureLowSecLoaded('all');
-  });
-
-  const nsfwBtn = document.getElementById('nsfw-toggle-btn');
-  nsfwBtn?.addEventListener('click', () => {
-    hideNsfw = !hideNsfw;
-    setSavedHideNsfw(hideNsfw);
-    updateHeaderButtons();
-    updateCategoryBar();
-    renderFilteredContent();
-    const urlSec = selectedCategoryIds.size === 1 ? Array.from(selectedCategoryIds)[0] : (selectedCategoryIds.size > 1 ? Array.from(selectedCategoryIds).join(',') : activeSectionId);
-    debouncedSyncUrl(searchQuery, urlSec, showLowSec, activeTagFilters, hideNsfw);
-    showToast(hideNsfw ? 'NSFW content hidden' : 'NSFW content shown (18+)');
   });
 
   const themeBtn = document.getElementById('theme-toggle-btn');
@@ -524,7 +496,7 @@ function attachStaticEventListeners() {
     updateHeaderButtons();
     updateCategoryBar();
     renderFilteredContent();
-    debouncedSyncUrl(searchQuery, 'favorites', showLowSec, activeTagFilters, hideNsfw);
+    debouncedSyncUrl(searchQuery, 'favorites', showLowSec, activeTagFilters);
   });
 
   const debouncedRenderSearch = debounce(() => {
@@ -538,7 +510,7 @@ function attachStaticEventListeners() {
     searchQuery = searchInput.value;
     debouncedRenderSearch();
     const urlSec = selectedCategoryIds.size === 1 ? Array.from(selectedCategoryIds)[0] : (selectedCategoryIds.size > 1 ? Array.from(selectedCategoryIds).join(',') : activeSectionId);
-    debouncedSyncUrl(searchQuery, urlSec, showLowSec, activeTagFilters, hideNsfw);
+    debouncedSyncUrl(searchQuery, urlSec, showLowSec, activeTagFilters);
   });
 
   const contentContainer = document.getElementById('content-container');
@@ -640,7 +612,7 @@ function attachStaticEventListeners() {
           updateCategoryBar();
           renderFilteredContent();
           const urlSec = selectedCategoryIds.size === 1 ? Array.from(selectedCategoryIds)[0] : (selectedCategoryIds.size > 1 ? Array.from(selectedCategoryIds).join(',') : activeSectionId);
-          syncUrlParams('', urlSec, showLowSec, activeTagFilters, hideNsfw);
+          syncUrlParams('', urlSec, showLowSec, activeTagFilters);
         } else {
           searchInput?.blur();
         }

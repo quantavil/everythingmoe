@@ -25,5 +25,3 @@ export interface SectionMeta {
   iconName: string;
   siteCount: number;
 }
-
-export const NSFW_SECTIONS = new Set(['hentai', 'hentairead']);

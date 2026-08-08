@@ -3,8 +3,7 @@ import { SECTION_MAPPINGS } from './data';
 const KEYS = {
   favs: 'everythingmoe_favorites_v2',
   theme: 'everythingmoe_theme_v2',
-  lowsec: 'everythingmoe_lowsec_v2',
-  nsfw: 'everythingmoe_nsfw_v2'
+  lowsec: 'everythingmoe_lowsec_v2'
 };
 
 const VALID_SECTION_IDS = new Set([
@@ -57,16 +56,6 @@ export function setSavedLowSec(enabled: boolean) {
   setItem(KEYS.lowsec, String(enabled));
 }
 
-/** Adult categories visible by default */
-export function getSavedHideNsfw(): boolean {
-  const saved = getItem(KEYS.nsfw);
-  return saved !== null ? saved === 'true' : false;
-}
-
-export function setSavedHideNsfw(hidden: boolean) {
-  setItem(KEYS.nsfw, String(hidden));
-}
-
 function sanitizeSection(sec: string): string {
   if (!sec || sec === 'all') return 'all';
   if (VALID_SECTION_IDS.has(sec)) return sec;
@@ -81,15 +70,13 @@ function sanitizeSection(sec: string): string {
 export function getUrlParams() {
   const p = new URLSearchParams(window.location.search);
   const lowsec = p.get('lowsec');
-  const nsfw = p.get('nsfw');
   const rawTags = p.get('tags');
   const tags = rawTags ? rawTags.split(',').filter(Boolean) : [];
   return {
     query: p.get('q') || '',
     section: sanitizeSection(p.get('section') || 'all'),
     tags,
-    lowsec: lowsec !== null ? lowsec === 'true' : null,
-    hideNsfw: nsfw !== null ? nsfw !== 'show' : null
+    lowsec: lowsec !== null ? lowsec === 'true' : null
   };
 }
 
@@ -97,8 +84,7 @@ export function syncUrlParams(
   query: string,
   section: string,
   lowsec: boolean,
-  tags: Set<string> = new Set(),
-  hideNsfw = true
+  tags: Set<string> = new Set()
 ) {
   const url = new URL(window.location.href);
   const setOrDel = (key: string, val: string | null) =>
@@ -108,6 +94,5 @@ export function syncUrlParams(
   setOrDel('section', section && section !== 'all' ? section : null);
   setOrDel('tags', tags.size > 0 ? Array.from(tags).join(',') : null);
   setOrDel('lowsec', lowsec ? 'true' : 'false');
-  setOrDel('nsfw', hideNsfw ? null : 'show');
   window.history.replaceState({}, '', url.toString());
 }

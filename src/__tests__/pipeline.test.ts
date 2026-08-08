@@ -61,14 +61,6 @@ describe('Filter Pipeline (src/main.ts)', () => {
     expect(result[0].id).toBe('site3');
   });
 
-  test('getFilteredSites respects hideNsfw flag', () => {
-    const hidden = getFilteredSites(sampleSites, { sectionId: 'all', hideNsfw: true });
-    expect(hidden.length).toBe(1);
-    expect(hidden[0].id).toBe('site1');
-
-    const shown = getFilteredSites(sampleSites, { sectionId: 'all', hideNsfw: false });
-    expect(shown.length).toBe(2);
-  });
 
   test('getUrlParams parses query params accurately', () => {
     const params = getUrlParams();
