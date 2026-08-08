@@ -12,7 +12,6 @@ describe('UI Components (src/components.ts)', () => {
     negative: [],
     info: 'Anime database portal',
     altlinks: [{ label: 'AniDB Main', url: 'https://anidb.net' }],
-    exAltlinks: [],
     domains: ['anidb.net'],
     isLowSec: false,
     isDead: false,

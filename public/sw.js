@@ -31,7 +31,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
-  const isDataRequest = url.pathname.endsWith('dataset.json') || url.pathname.includes('/lowsec/');
+  const isDataRequest = url.pathname.includes('/api/dataset') || url.pathname.includes('/api/lowsec') || url.pathname.endsWith('dataset.json') || url.pathname.includes('/lowsec/');
 
   if (isDataRequest) {
     event.respondWith(

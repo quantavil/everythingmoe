@@ -54,6 +54,7 @@
     --radius-md: 8px;
     --radius-lg: 12px;
     --radius-card: 12px;
+    --radius-pill: 9999px;
     --radius-full: 9999px;
 
     --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
@@ -586,14 +587,17 @@
 
   /* Dead / Discontinued Sites Styling */
   .site-card.dead-card {
+    filter: grayscale(60%);
     opacity: 0.7;
-    border-color: rgba(255, 77, 77, 0.25);
+    border-color: rgba(244, 63, 94, 0.3);
+    transition: filter 0.2s var(--ease-out-quint), opacity 0.2s var(--ease-out-quint), border-color 0.2s var(--ease-out-quint);
 
     .card-inner {
       background-color: var(--bg-canvas);
     }
 
     &:hover {
+      filter: grayscale(0%);
       opacity: 0.95;
       border-color: var(--color-danger);
     }
@@ -623,7 +627,6 @@
     padding: 6px;
     box-shadow: var(--card-shadow);
     transition: transform 0.2s var(--ease-out-quint), border-color 0.2s var(--ease-out-quint), box-shadow 0.2s var(--ease-out-quint);
-    will-change: transform;
     /* Staggered entry animation — index set via inline style */
     animation: card-enter 0.4s var(--ease-out-quint) backwards;
     animation-delay: calc(var(--i, 0) * 50ms);
@@ -642,15 +645,6 @@
       border-style: dashed;
       border-color: var(--border-bright);
       opacity: 0.95;
-    }
-
-    &.dead-card {
-      filter: grayscale(75%) opacity(0.65);
-      transition: filter 0.25s ease, opacity 0.25s ease;
-
-      &:hover {
-        filter: grayscale(0%) opacity(1);
-      }
     }
   }
 
@@ -952,15 +946,15 @@
     transition: all 0.15s var(--ease-out-quint);
 
     &.primary-mirror {
-      border-color: var(--color-cyan);
-      color: var(--color-cyan);
+      border-color: var(--color-amber);
+      color: var(--color-amber);
       font-weight: 600;
-      background-color: rgba(56, 189, 248, 0.08);
+      background-color: rgba(245, 158, 11, 0.1);
 
       &:hover {
-        background-color: var(--color-cyan);
+        background-color: var(--color-amber);
         color: #000;
-        border-color: var(--color-cyan);
+        border-color: var(--color-amber);
       }
     }
 
@@ -1193,7 +1187,7 @@
   }
 
   .search-field {
-    padding-inline: 42px 14px;
+    padding-inline: 42px 110px;
     font-size: 14px;
   }
 
@@ -1204,13 +1198,18 @@
   .site-grid {
     grid-template-columns: 1fr;
   }
-
-  .compact-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @layer utilities {
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
   @keyframes skeleton-shimmer {
     0% {
       background-position: 200% 0;

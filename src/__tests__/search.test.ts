@@ -13,7 +13,6 @@ describe('Search Engine (src/search.ts)', () => {
       negative: [],
       info: 'Popular anime streaming portal',
       altlinks: [{ label: 'AniWave Official', url: 'https://aniwave.to' }],
-      exAltlinks: [],
       domains: ['aniwave.to'],
       isLowSec: false,
       isDead: false
@@ -27,7 +26,6 @@ describe('Search Engine (src/search.ts)', () => {
       negative: [],
       info: 'Open source manga reader platform',
       altlinks: [{ label: 'MangaDex Main', url: 'https://mangadex.org' }],
-      exAltlinks: [],
       domains: ['mangadex.org'],
       isLowSec: false,
       isDead: false

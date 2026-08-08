@@ -16,9 +16,21 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#0c0d12" />
+    <meta name="theme-color" content="#0d0c0b" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('everythingmoe_theme_v2');
+          if (saved === 'light' || saved === 'dark') {
+            document.documentElement.setAttribute('data-theme', saved);
+          } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+            document.documentElement.setAttribute('data-theme', 'light');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <!-- Fonts: Editorial Luxury typography (Playfair Display + Plus Jakarta Sans + Geist Mono) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -26,7 +38,7 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
-    <a href="#content" class="sr-only">Skip to content</a>
+    <a href="#content-container" class="sr-only">Skip to content</a>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

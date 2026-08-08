@@ -20,12 +20,13 @@ Ultra-fast, zero-dependency Otaku resource directory indexing 1,200+ main & low-
 ## Non-Obvious Discoveries
 - Sites without `altlink` or `domains` property require fallback link generation to `https://${key}.com`.
 - Sites marked with `ex-DEAD` or `#dead` tags are flagged as `isDead` and separated into the `💀 Dead / Offline` category tab.
-- Google `s2/favicons` service returns HTTP 200 with 16x16 default globe images for missing favicons, which bypassed `onerror` handlers.
+- Google `s2/favicons` service returns HTTP 200 with 16x16 default globe images for missing favicons, which bypassed `onerror` handlers; handled by inspecting `img.naturalWidth <= 16` on fallback load.
 - Multi-tier icon loader resolves: official static PNG -> Google domain favicon -> dynamic gradient letter avatar badge.
 - `checkAllMirrorsHealth` checks ALL mirrors per site, ensuring every mirror pill receives a live status dot.
 - Dual probe strategy (`fetch` GET no-cors + `Image` favicon fallback) ensures accurate health detection across Cloudflare, strict CORS policies, and browser security restrictions.
 - 5-minute `healthCache` backed by `sessionStorage` eliminates repetitive network traffic on scroll/refresh, bypassable via `.recheck-health-btn`.
 - Synchronous `getCachedSiteHealth` check in card components renders status badges instantly without triggering `IntersectionObserver` on cached cards.
+- Unified `getFilteredSites()` pipeline ensures Bookmarks and Dead tab counts match active query, tag, lowsec, and NSFW filters consistently.
 
 ## Blunders Log
 - **Blunder**: `Boolean(item['ex-DEAD'])` coercing string `"0"` or `"false"` to `true`.
@@ -37,6 +38,9 @@ Ultra-fast, zero-dependency Otaku resource directory indexing 1,200+ main & low-
 - **Blunder**: Un-scoped `/` keyboard shortcut intercepting input typing.
   - **Root Cause**: Shortcut listener only checked `document.activeElement !== searchInput`.
   - **Fix**: Extended check to ignore keydown events when `activeElement` is `INPUT`, `TEXTAREA`, `SELECT`, or `isContentEditable`.
+- **Blunder**: Dead tab count and Bookmarks ignoring active search and tag filters.
+  - **Root Cause**: `updateCategoryBar` used separate raw array lengths instead of filtering pipeline.
+  - **Fix**: Replaced inline array filters with single `getFilteredSites()` pipeline function.
 
 ## Structural Changes
 - Squashed all iteration commits into one single clean commit on `main` (`0a4e185`).
@@ -46,3 +50,6 @@ Ultra-fast, zero-dependency Otaku resource directory indexing 1,200+ main & low-
 - Upgraded Filter Drawer with 100% SVG vector icons and 3 categorized feature groups.
 - Category navigation supports multi-select toggling with distinct SVG icons for all 18 categories.
 - Restructured card header to grant site title 100% full width, preventing line wrapping.
+- Deleted `mock_redesign.html` (1,033 lines) prototype file.
+- Created `src/__tests__/pipeline.test.ts` to test filter pipeline (`getFilteredSites`).
+- Added NSFW toggle state and `--radius-pill` design token to CSS design system.

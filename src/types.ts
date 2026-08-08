@@ -12,9 +12,7 @@ export interface SiteItem {
   negative: string[];
   info: string;
   altlinks: MirrorLink[];
-  exAltlinks: MirrorLink[];
   domains: string[];
-  safetyScore?: number;
   isLowSec?: boolean;
   isDead?: boolean;
   iconUrl?: string;
@@ -28,4 +26,4 @@ export interface SectionMeta {
   siteCount: number;
 }
 
-
+export const NSFW_SECTIONS = new Set(['hentai', 'hentairead']);

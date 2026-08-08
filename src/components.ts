@@ -27,7 +27,7 @@ function renderStatusBadge(res: AllMirrorsCheckResult | null): string {
   if (!res) return `<span class="status-badge checking">${icons.activity(12)} CHECKING...</span>`;
   const isLive = res.liveCount > 0;
   const ping = res.bestPingMs ? ` (${res.bestPingMs}ms)` : '';
-  return `<span class="status-badge ${isLive ? 'online' : 'offline'}">${isLive ? icons.check(11) : icons.alert(11)} ${res.liveCount}/${res.totalCount} Live${ping}</span>`;
+  return `<span class="status-badge ${isLive ? 'online' : 'offline'}" title="Estimated reachability based on network probe">${isLive ? icons.check(11) : icons.alert(11)} ${res.liveCount}/${res.totalCount} Up${ping}</span>`;
 }
 
 function renderStatusControl(site: IndexedSiteItem, cached: AllMirrorsCheckResult | null): string {
@@ -75,7 +75,12 @@ export function renderSkeletonState(appEl: HTMLElement, query: string, lowsec: b
   appEl.innerHTML = `
     <header class="site-header">
       <div class="header-inner">
-        <a href="#" class="brand-title" id="logo-btn"><span class="brand-badge">2.0</span><span>EVERYTHING<span class="brand-accent">MOE</span></span></a>
+        <a href="#" class="brand-title" id="logo-btn" aria-label="EverythingMoe 2.0 Home">
+          <span class="brand-text-wrapper">
+            <span class="brand-text">EVERYTHING<span class="brand-accent">MOE</span></span>
+            <sup class="brand-badge-sup">2.0</sup>
+          </span>
+        </a>
         <div class="header-controls">
           <button class="btn btn-icon ${lowsec ? 'btn-primary' : ''}" id="lowsec-toggle-btn" title="Toggle Low-Ranked Sites" aria-label="Toggle Low-Ranked Sites">${lowsec ? icons.shieldAlert(18) : icons.alert(18)}</button>
           <button class="btn btn-icon" id="theme-toggle-btn" title="Toggle Theme" aria-label="Toggle Theme">${theme === 'dark' ? icons.sun(18) : icons.moon(18)}</button>
@@ -141,7 +146,7 @@ export function renderGridCard(site: IndexedSiteItem, isBookmarked: boolean, ind
             </div>
             <div class="card-actions-top">
               ${renderStatusControl(site, cached)}
-              <button class="bookmark-action-btn ${isBookmarked ? 'active' : ''}" data-fav-id="${escapeHtml(site.id)}" title="Toggle Bookmark">${icons.star(18, isBookmarked)}</button>
+              <button class="bookmark-action-btn ${isBookmarked ? 'active' : ''}" data-fav-id="${escapeHtml(site.id)}" title="${isBookmarked ? 'Remove Bookmark' : 'Add Bookmark'}" aria-label="${isBookmarked ? 'Remove from bookmarks' : 'Add to bookmarks'}">${icons.star(18, isBookmarked)}</button>
             </div>
           </div>
           <div class="site-title-inline">

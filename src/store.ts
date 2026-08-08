@@ -3,16 +3,20 @@ import { SECTION_MAPPINGS } from './data';
 const KEYS = {
   favs: 'everythingmoe_favorites_v2',
   theme: 'everythingmoe_theme_v2',
-  lowsec: 'everythingmoe_lowsec_v2'
+  lowsec: 'everythingmoe_lowsec_v2',
+  nsfw: 'everythingmoe_nsfw_v2'
 };
 
-const VALID_SECTIONS = new Set(['all', 'favorites', 'dead', ...Object.values(SECTION_MAPPINGS).map(m => m.id)]);
+const VALID_SECTION_IDS = new Set([
+  'all', 'favorites', 'dead',
+  ...Object.values(SECTION_MAPPINGS).map(m => m.id)
+]);
 
 const getItem = (key: string) => {
   try { return localStorage.getItem(key); } catch { return null; }
 };
 const setItem = (key: string, val: string) => {
-  try { localStorage.setItem(key, val); } catch {}
+  try { localStorage.setItem(key, val); } catch { /* quota / private mode */ }
 };
 
 export function getBookmarks(): string[] {
@@ -53,27 +57,57 @@ export function setSavedLowSec(enabled: boolean) {
   setItem(KEYS.lowsec, String(enabled));
 }
 
+/** Adult categories hidden by default */
+export function getSavedHideNsfw(): boolean {
+  const saved = getItem(KEYS.nsfw);
+  return saved !== null ? saved === 'true' : true;
+}
+
+export function setSavedHideNsfw(hidden: boolean) {
+  setItem(KEYS.nsfw, String(hidden));
+}
+
+function sanitizeSection(sec: string): string {
+  if (!sec || sec === 'all') return 'all';
+  if (VALID_SECTION_IDS.has(sec)) return sec;
+  if (sec.includes(',')) {
+    const parts = sec.split(',').map(s => s.trim()).filter(s => VALID_SECTION_IDS.has(s) && !['all', 'favorites', 'dead'].includes(s));
+    if (parts.length === 1) return parts[0];
+    if (parts.length > 1) return parts.join(',');
+  }
+  return 'all';
+}
+
 export function getUrlParams() {
   const p = new URLSearchParams(window.location.search);
   const lowsec = p.get('lowsec');
-  const sec = p.get('section') || 'all';
+  const nsfw = p.get('nsfw');
   const rawTags = p.get('tags');
   const tags = rawTags ? rawTags.split(',').filter(Boolean) : [];
   return {
     query: p.get('q') || '',
-    section: VALID_SECTIONS.has(sec) || sec.includes(',') ? sec : 'all',
+    section: sanitizeSection(p.get('section') || 'all'),
     tags,
-    lowsec: lowsec !== null ? lowsec === 'true' : null
+    lowsec: lowsec !== null ? lowsec === 'true' : null,
+    hideNsfw: nsfw !== null ? nsfw !== 'show' : null
   };
 }
 
-export function syncUrlParams(query: string, section: string, lowsec: boolean, tags: Set<string> = new Set()) {
+export function syncUrlParams(
+  query: string,
+  section: string,
+  lowsec: boolean,
+  tags: Set<string> = new Set(),
+  hideNsfw = true
+) {
   const url = new URL(window.location.href);
-  const setOrDel = (key: string, val: string | null) => val ? url.searchParams.set(key, val) : url.searchParams.delete(key);
+  const setOrDel = (key: string, val: string | null) =>
+    val ? url.searchParams.set(key, val) : url.searchParams.delete(key);
+
   setOrDel('q', query.trim() || null);
   setOrDel('section', section && section !== 'all' ? section : null);
   setOrDel('tags', tags.size > 0 ? Array.from(tags).join(',') : null);
   setOrDel('lowsec', lowsec ? 'true' : 'false');
+  setOrDel('nsfw', hideNsfw ? null : 'show');
   window.history.replaceState({}, '', url.toString());
 }
-

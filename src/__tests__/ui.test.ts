@@ -27,7 +27,6 @@ describe('UI Utilities (src/ui.ts)', () => {
       negative: [],
       info: '',
       altlinks: [{ label: 'Mirror', url: 'https://sub.domain.org/path' }],
-      exAltlinks: [],
       domains: ['primary.com'],
       isDead: false
     };
@@ -43,7 +42,6 @@ describe('UI Utilities (src/ui.ts)', () => {
       negative: [],
       info: '',
       altlinks: [{ label: 'Mirror', url: 'https://fallback-mirror.to/path' }],
-      exAltlinks: [],
       domains: [],
       isDead: false
     };

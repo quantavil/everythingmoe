@@ -24,7 +24,7 @@ export const SECTION_MAPPINGS: Record<string, { id: string; title: string }> = {
 const lowsecCache = new Map<string, SiteItem[]>();
 const UPSTREAM_DATA_URL = 'https://everythingmoe.com';
 
-export function isExplicitlyDead(val: any): boolean {
+export function isExplicitlyDead(val: unknown): boolean {
   if (val === true) return true;
   if (typeof val === 'string') {
     const s = val.trim().toLowerCase();
@@ -35,7 +35,14 @@ export function isExplicitlyDead(val: any): boolean {
 
 export function strip(raw?: string): string {
   if (!raw || typeof raw !== 'string') return '';
-  return raw.replace(/<[^>]*>?/gm, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+  return raw
+    .replace(/<[^>]*>?/gm, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
 }
 
 export function parseLinks(raw?: string): MirrorLink[] {
@@ -47,7 +54,9 @@ export function parseLinks(raw?: string): MirrorLink[] {
       return { label: strip(parts[0]) || 'Link', url: parts[1].trim() };
     }
     const trimmed = entry.trim();
-    return (trimmed.startsWith('http://') || trimmed.startsWith('https://')) ? { label: 'Link', url: trimmed } : null;
+    return (trimmed.startsWith('http://') || trimmed.startsWith('https://'))
+      ? { label: 'Link', url: trimmed }
+      : null;
   }).filter((item): item is MirrorLink => item !== null && item.url.length > 0 && /^https?:\/\//i.test(item.url));
 }
 
@@ -64,9 +73,15 @@ async function fetchJson<T>(endpoints: string[], fallback: T): Promise<T> {
         const data = await res.json();
         if (data && (Array.isArray(data) || Object.keys(data).length > 0)) return data as T;
       }
-    } catch {}
+    } catch {
+      // try next endpoint
+    }
   }
   return fallback;
+}
+
+function cleanIconId(raw: string): string {
+  return raw.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 export async function fetchLowSecForSection(secId: string): Promise<SiteItem[]> {
@@ -79,10 +94,12 @@ export async function fetchLowSecForSection(secId: string): Promise<SiteItem[]> 
     const filters = item.filter ? item.filter.split(',').map((f: string) => strip(f)) : [];
     const tagsText = item.tags ? strip(item.tags) : '';
     let host = '';
-    try { host = new URL(item.link).hostname; } catch {}
+    try { host = new URL(item.link).hostname; } catch { /* ignore */ }
 
-    const cleanId = (item.id || item.title).toLowerCase().replace(/[^a-z0-9]/g, '');
-    const isDead = isExplicitlyDead(item['ex-DEAD']) || filters.some((f: string) => /dead|shutdown|discontinued|defunct|offline|closed/i.test(f)) || /discontinued|shut down|dead site/i.test(tagsText);
+    const cleanId = cleanIconId(item.id || item.title);
+    const isDead = isExplicitlyDead(item['ex-DEAD'])
+      || filters.some((f: string) => /dead|shutdown|discontinued|defunct|offline|closed/i.test(f))
+      || /discontinued|shut down|dead site/i.test(tagsText);
 
     return {
       id: `lowsec_${secId}_${item.id || item.title}`,
@@ -93,9 +110,7 @@ export async function fetchLowSecForSection(secId: string): Promise<SiteItem[]> 
       negative: ['Lower Security / Unverified'],
       info: tagsText ? `Tags: ${tagsText}` : 'Lower-ranked site listing.',
       altlinks: [{ label: host || item.title, url: item.link }],
-      exAltlinks: [],
       domains: host ? [host] : [],
-      safetyScore: 50,
       isLowSec: true,
       isDead,
       iconUrl: item.icon || `https://static.everythingmoe.com/icons/${cleanId}.png`
@@ -134,7 +149,9 @@ export async function fetchEverythingMoeData(): Promise<{ sites: SiteItem[]; sec
     const domains = val.domains ? val.domains.split(/[\s,#]+/).filter(Boolean) : [];
     const info = strip(val.info);
 
-    const isDead = isExplicitlyDead(val['ex-DEAD']) || neg.some(n => /dead|shutdown|discontinued|defunct|offline|closed|shut down/i.test(n)) || /discontinued|shut down|no longer active|permanently closed|dead site/i.test(info);
+    const isDead = isExplicitlyDead(val['ex-DEAD'])
+      || neg.some(n => /dead|shutdown|discontinued|defunct|offline|closed|shut down/i.test(n))
+      || /discontinued|shut down|no longer active|permanently closed|dead site/i.test(info);
 
     if (domains.length > 0) {
       for (const d of domains) {
@@ -149,9 +166,9 @@ export async function fetchEverythingMoeData(): Promise<{ sites: SiteItem[]; sec
       if (!altlinks.some(l => l.url === ex.url)) altlinks.push(ex);
     }
 
-    if (!altlinks.length) {
-      const defaultDomain = `${key.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
-      altlinks.push({ label: defaultDomain, url: `https://${defaultDomain}` });
+    if (!altlinks.length && domains.length > 0) {
+      const d = domains[0];
+      altlinks.push({ label: d, url: d.startsWith('http') ? d : `https://${d}` });
     }
 
     sites.push({
@@ -163,18 +180,16 @@ export async function fetchEverythingMoeData(): Promise<{ sites: SiteItem[]; sec
       negative: neg,
       info,
       altlinks,
-      exAltlinks: exAlt,
       domains,
-      safetyScore: pos.some(p => /no ad|clean|ad-free/i.test(p)) ? 98 : neg.some(n => /bad ad|pop-up|malware|redirect/i.test(n)) ? 65 : 85,
       isLowSec: false,
       isDead,
-      iconUrl: val.icon || `https://static.everythingmoe.com/icons/${key.toLowerCase().replace(/[^a-z0-9]/g, '')}.png`
+      iconUrl: val.icon || `https://static.everythingmoe.com/icons/${cleanIconId(key)}.png`
     });
 
     counts[curSec] = (counts[curSec] || 0) + 1;
   }
 
-  const sections: SectionMeta[] = Object.entries(SECTION_MAPPINGS).map(([_, meta]) => ({
+  const sections: SectionMeta[] = Object.entries(SECTION_MAPPINGS).map(([, meta]) => ({
     id: meta.id,
     key: `section${meta.id}`,
     title: meta.title,
@@ -184,4 +199,3 @@ export async function fetchEverythingMoeData(): Promise<{ sites: SiteItem[]; sec
 
   return { sites, sections };
 }
-

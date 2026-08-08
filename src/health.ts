@@ -21,6 +21,7 @@ interface CachedHealthEntry {
 }
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const PROBE_TIMEOUT_MS = 2500;
 const SESSION_CACHE_KEY = 'everythingmoe_health_cache_v1';
 
 function loadHealthCache(): Map<string, CachedHealthEntry> {
@@ -34,7 +35,7 @@ function loadHealthCache(): Map<string, CachedHealthEntry> {
         if (now - entry.checkedAt < CACHE_TTL_MS) map.set(url, entry);
       }
     }
-  } catch {}
+  } catch { /* ignore corrupt cache */ }
   return map;
 }
 
@@ -50,7 +51,7 @@ function saveHealthCache() {
         if (now - entry.checkedAt < CACHE_TTL_MS) obj[url] = entry;
       });
       sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(obj));
-    } catch {}
+    } catch { /* ignore */ }
   }, 400);
 }
 
@@ -110,7 +111,8 @@ class ConcurrencyQueue {
 const healthCheckQueue = new ConcurrencyQueue(5);
 const siteCheckQueue = new ConcurrencyQueue(4);
 
-async function probeImage(url: string, timeoutMs = 2500): Promise<boolean> {
+/** Favicon probe — reachability heuristic only (not proof the site works). */
+async function probeImage(url: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<boolean> {
   return new Promise(resolve => {
     try {
       const parsed = new URL(url);
@@ -137,21 +139,29 @@ async function probeImage(url: string, timeoutMs = 2500): Promise<boolean> {
   });
 }
 
-export async function pingUrl(url: string, forceRefresh = false): Promise<{ status: 'online' | 'offline'; pingMs?: number }> {
+/**
+ * Browser-side reachability estimate.
+ * no-cors fetch only proves the host answered — not that the site is usable.
+ */
+export async function pingUrl(
+  url: string,
+  forceRefresh = false
+): Promise<{ status: 'online' | 'offline'; pingMs?: number }> {
   if (!forceRefresh) {
     const cached = healthCache.get(url);
     if (cached && Date.now() - cached.checkedAt < CACHE_TTL_MS) {
       return { status: cached.status, pingMs: cached.pingMs };
     }
-    if (inFlightProbes.has(url)) return inFlightProbes.get(url)!;
+    const inflight = inFlightProbes.get(url);
+    if (inflight) return inflight;
   }
 
-  const probeTask: Promise<{ status: 'online' | 'offline'; pingMs?: number }> = healthCheckQueue.run(async () => {
+  const probeTask = healthCheckQueue.run(async () => {
     const start = performance.now();
     let timer: ReturnType<typeof setTimeout> | null = null;
     try {
       const controller = new AbortController();
-      timer = setTimeout(() => controller.abort(), 2500);
+      timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
       await fetch(url, { method: 'GET', mode: 'no-cors', cache: 'no-cache', signal: controller.signal });
       const pingMs = Math.round(performance.now() - start);
       setHealthCache(url, { status: 'online', pingMs, checkedAt: Date.now() });
@@ -171,11 +181,14 @@ export async function pingUrl(url: string, forceRefresh = false): Promise<{ stat
     }
   }).finally(() => inFlightProbes.delete(url));
 
-  if (!forceRefresh) inFlightProbes.set(url, probeTask);
+  inFlightProbes.set(url, probeTask);
   return probeTask;
 }
 
-export async function checkAllMirrorsHealth(altlinks: MirrorLink[], forceRefresh = false): Promise<AllMirrorsCheckResult> {
+export async function checkAllMirrorsHealth(
+  altlinks: MirrorLink[],
+  forceRefresh = false
+): Promise<AllMirrorsCheckResult> {
   if (!altlinks?.length) return { liveCount: 0, totalCount: 0, mirrors: [] };
 
   const runCheck = async () => {
