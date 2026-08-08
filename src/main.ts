@@ -259,14 +259,12 @@ function updateCategoryBar() {
 
   const baseFilter = { searchQuery, showLowSec, activeTagFilters };
   const allCount = getFilteredSites(allSites, { ...baseFilter, sectionId: 'all' }).length;
-  const favCount = getFilteredSites(allSites, { ...baseFilter, sectionId: 'favorites' }).length;
   const deadCount = getFilteredSites(allSites, { ...baseFilter, sectionId: 'dead' }).length;
 
   const isAllActive = activeSectionId === 'all' || (activeSectionId === 'category' && selectedCategoryIds.size === 0);
 
   categoryBar.innerHTML = `
     <button class="cat-pill ${isAllActive ? 'active' : ''}" data-section="all" aria-pressed="${isAllActive}" title="Show all site listings">All Sites <span class="cat-pill-count">${allCount}</span></button>
-    <button class="cat-pill ${activeSectionId === 'favorites' ? 'active' : ''}" data-section="favorites" aria-pressed="${activeSectionId === 'favorites'}" title="Show bookmarked sites"> ${icons.star(14, activeSectionId === 'favorites')} Bookmarks <span class="cat-pill-count">${favCount}</span></button>
     ${allSections.map(sec => {
       const catCount = getFilteredSites(allSites, { ...baseFilter, sectionId: 'category', selectedCategoryIds: new Set([sec.id]) }).length;
       const isCatActive = selectedCategoryIds.has(sec.id);
@@ -283,7 +281,7 @@ function updateCategoryBar() {
         if (section === 'all') {
           activeSectionId = 'all';
           selectedCategoryIds.clear();
-        } else if (section === 'favorites' || section === 'dead') {
+        } else if (section === 'dead') {
           activeSectionId = section;
           selectedCategoryIds.clear();
         } else {
@@ -488,13 +486,18 @@ function attachStaticEventListeners() {
 
   const favsHeaderBtn = document.getElementById('favorites-tab-btn');
   favsHeaderBtn?.addEventListener('click', () => {
-    activeSectionId = 'favorites';
+    if (activeSectionId === 'favorites') {
+      activeSectionId = 'all';
+    } else {
+      activeSectionId = 'favorites';
+    }
     selectedCategoryIds.clear();
     displayedItemCount = ITEMS_PER_PAGE;
     updateHeaderButtons();
     updateCategoryBar();
     renderFilteredContent();
-    debouncedSyncUrl(searchQuery, 'favorites', showLowSec, activeTagFilters);
+    const urlSec = selectedCategoryIds.size === 1 ? Array.from(selectedCategoryIds)[0] : (selectedCategoryIds.size > 1 ? Array.from(selectedCategoryIds).join(',') : activeSectionId);
+    debouncedSyncUrl(searchQuery, urlSec, showLowSec, activeTagFilters);
   });
 
   const debouncedRenderSearch = debounce(() => {

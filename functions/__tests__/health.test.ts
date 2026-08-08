@@ -47,4 +47,60 @@ describe('Cloudflare Pages Function: health.ts', () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  test('recognizes Cloudflare 403 challenge targets like animepahe as online', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (() =>
+      Promise.resolve(new Response('Cloudflare Challenge', { status: 403 }))
+    ) as unknown as typeof fetch;
+
+    try {
+      const request = new Request('https://everythingmoe.com/api/health?url=https://animepahe.com');
+      const response = await onRequest({ request });
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.status).toBe('online');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test('verifies anikoto mirror links respond online', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (() =>
+      Promise.resolve(new Response('Anichi Home', { status: 200 }))
+    ) as unknown as typeof fetch;
+
+    try {
+      const request = new Request('https://everythingmoe.com/api/health?url=https://anichi.to/home');
+      const response = await onRequest({ request });
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.status).toBe('online');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test('correctly identifies 301 redirects such as animepahe.com -> animepahe.pw', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (() =>
+      Promise.resolve(new Response(null, {
+        status: 301,
+        headers: { Location: 'https://animepahe.pw/' }
+      }))
+    ) as unknown as typeof fetch;
+
+    try {
+      const request = new Request('https://everythingmoe.com/api/health?url=https://animepahe.com');
+      const response = await onRequest({ request });
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.status).toBe('redirected');
+      expect(body.redirectHost).toBe('animepahe.pw');
+      expect(body.redirectUrl).toBe('https://animepahe.pw/');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

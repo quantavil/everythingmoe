@@ -135,20 +135,24 @@ async function probeImage(url: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<bo
       };
       const timer = setTimeout(() => finish(false), timeoutMs);
 
-      const img1 = new Image();
-      img1.onload = () => { clearTimeout(timer); finish(true); };
-      img1.onerror = () => {
-        const img2 = new Image();
-        img2.onload = () => { clearTimeout(timer); finish(true); };
-        img2.onerror = () => {
-          const img3 = new Image();
-          img3.onload = () => { clearTimeout(timer); finish(true); };
-          img3.onerror = () => { clearTimeout(timer); finish(false); };
-          img3.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(parsed.hostname)}&sz=32&_t=${Date.now()}`;
+      const tryFavicon = (src: string, onErr: () => void, checkNaturalWidth = false) => {
+        const img = new Image();
+        img.onload = () => {
+          clearTimeout(timer);
+          finish(checkNaturalWidth ? img.naturalWidth > 16 : true);
         };
-        img2.src = `${parsed.origin}/favicon.png?_t=${Date.now()}`;
+        img.onerror = onErr;
+        img.src = src;
       };
-      img1.src = `${parsed.origin}/favicon.ico?_t=${Date.now()}`;
+
+      tryFavicon(`${parsed.origin}/favicon.ico?_t=${Date.now()}`, () => {
+        tryFavicon(`${parsed.origin}/favicon.png?_t=${Date.now()}`, () => {
+          tryFavicon(`https://www.google.com/s2/favicons?domain=${encodeURIComponent(parsed.hostname)}&sz=32&_t=${Date.now()}`, () => {
+            clearTimeout(timer);
+            finish(false);
+          }, true);
+        });
+      });
     } catch {
       resolve(false);
     }
@@ -195,11 +199,8 @@ export async function pingUrl(
       }
     } catch { /* fallback to browser probes */ }
 
-    let timer: ReturnType<typeof setTimeout> | null = null;
     try {
-      const controller = new AbortController();
-      timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
-      await fetch(url, { method: 'GET', mode: 'no-cors', cache: 'no-cache', signal: controller.signal });
+      await fetch(url, { method: 'GET', mode: 'no-cors', cache: 'no-cache', signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
       const pingMs = Math.round(performance.now() - start);
       setHealthCache(url, { status: 'online', pingMs, checkedAt: Date.now() });
       return { status: 'online' as const, pingMs };
@@ -213,8 +214,6 @@ export async function pingUrl(
       }
       setHealthCache(url, { status: 'offline', checkedAt: Date.now() });
       return { status: 'offline' as const };
-    } finally {
-      if (timer) clearTimeout(timer);
     }
   }).finally(() => inFlightProbes.delete(url));
 
