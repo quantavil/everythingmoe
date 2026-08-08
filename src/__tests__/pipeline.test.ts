@@ -1,3 +1,10 @@
+if (typeof globalThis.window === 'undefined') {
+  (globalThis as any).window = {
+    location: { href: 'https://everythingmoe.com', search: '' },
+    history: { replaceState: () => {} }
+  };
+}
+
 import { expect, test, describe } from 'bun:test';
 import { getFilteredSites, matchesTagFilters } from '../main';
 import { IndexedSiteItem } from '../search';

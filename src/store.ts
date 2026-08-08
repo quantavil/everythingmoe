@@ -68,7 +68,8 @@ function sanitizeSection(sec: string): string {
 }
 
 export function getUrlParams() {
-  const p = new URLSearchParams(window.location.search);
+  const search = typeof window !== 'undefined' ? window.location.search : '';
+  const p = new URLSearchParams(search);
   const lowsec = p.get('lowsec');
   const rawTags = p.get('tags');
   const tags = rawTags ? rawTags.split(',').filter(Boolean) : [];
