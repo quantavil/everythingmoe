@@ -45,9 +45,30 @@ export function strip(raw?: string): string {
     .trim();
 }
 
+export interface UpstreamLowSecItem {
+  id?: string;
+  title?: string;
+  link?: string;
+  filter?: string;
+  tags?: string;
+  icon?: string;
+  'ex-DEAD'?: unknown;
+}
+
+export interface UpstreamDatasetItem {
+  positive?: string;
+  negative?: string;
+  altlink?: string;
+  'ex-altlink'?: string;
+  domains?: string;
+  info?: string;
+  'ex-DEAD'?: unknown;
+  [key: string]: unknown;
+}
+
 export function parseLinks(raw?: string): MirrorLink[] {
   if (!raw || typeof raw !== 'string') return [];
-  const entries = raw.split(/#(?=(?:[^#<]+<<https?:\/\/|https?:\/\/))/i);
+  const entries = raw.split(/#(?!\d+<<)(?=(?:[^#<]+<<https?:\/\/|https?:\/\/))/i);
   return entries.map(entry => {
     const parts = entry.split('<<');
     if (parts.length >= 2) {
@@ -86,30 +107,31 @@ function cleanIconId(raw: string): string {
 
 export async function fetchLowSecForSection(secId: string): Promise<SiteItem[]> {
   if (lowsecCache.has(secId)) return lowsecCache.get(secId)!;
-  const raw = await fetchJson<any[]>([`/api/lowsec?sec=${secId}`, `${UPSTREAM_DATA_URL}/lowsec/${secId}.json`], []);
+  const raw = await fetchJson<UpstreamLowSecItem[]>([`/api/lowsec?sec=${secId}`, `${UPSTREAM_DATA_URL}/lowsec/${secId}.json`], []);
   const meta = Object.values(SECTION_MAPPINGS).find(m => m.id === secId);
   const categoryTitle = meta ? meta.title : secId;
 
-  const items: SiteItem[] = raw.filter(item => item.title && item.link).map(item => {
-    const filters = item.filter ? item.filter.split(',').map((f: string) => strip(f)) : [];
-    const tagsText = item.tags ? strip(item.tags) : '';
+  const items: SiteItem[] = raw.filter(item => typeof item.title === 'string' && typeof item.link === 'string' && item.title && item.link).map(item => {
+    const filterStr = typeof item.filter === 'string' ? item.filter : '';
+    const filters = filterStr ? filterStr.split(',').map((f: string) => strip(f)) : [];
+    const tagsText = typeof item.tags === 'string' ? strip(item.tags) : '';
     let host = '';
-    try { host = new URL(item.link).hostname; } catch { /* ignore */ }
+    try { host = new URL(item.link!).hostname; } catch { /* ignore */ }
 
-    const cleanId = cleanIconId(item.id || item.title);
+    const cleanId = cleanIconId(item.id || item.title!);
     const isDead = isExplicitlyDead(item['ex-DEAD'])
       || filters.some((f: string) => /dead|shutdown|discontinued|defunct|offline|closed/i.test(f))
       || /discontinued|shut down|dead site/i.test(tagsText);
 
     return {
       id: `lowsec_${secId}_${item.id || item.title}`,
-      name: item.title,
+      name: item.title!,
       section: secId,
       categoryName: `${categoryTitle} (Low-Ranked)`,
       positive: filters,
       negative: ['Lower Security / Unverified'],
       info: tagsText ? `Tags: ${tagsText}` : 'Lower-ranked site listing.',
-      altlinks: [{ label: host || item.title, url: item.link }],
+      altlinks: [{ label: host || item.title!, url: item.link! }],
       domains: host ? [host] : [],
       isLowSec: true,
       isDead,
@@ -133,7 +155,11 @@ const KNOWN_PRIMARY_DOMAINS: Record<string, { label: string; url: string }> = {
 };
 
 export async function fetchEverythingMoeData(): Promise<{ sites: SiteItem[]; sections: SectionMeta[] }> {
-  const rawMain = await fetchJson<Record<string, any>>(['/api/dataset', `${UPSTREAM_DATA_URL}/dataset.json`], {});
+  const rawMain = await fetchJson<Record<string, UpstreamDatasetItem>>(['/api/dataset', `${UPSTREAM_DATA_URL}/dataset.json`], {});
+  if (!rawMain || Object.keys(rawMain).length === 0) {
+    throw new Error('Failed to load site data from all available sources.');
+  }
+
   const sites: SiteItem[] = [];
   const counts: Record<string, number> = {};
   let curSec = 'anime';
@@ -152,8 +178,8 @@ export async function fetchEverythingMoeData(): Promise<{ sites: SiteItem[]; sec
     const neg = parseTags(val.negative);
     const altlinks = parseLinks(val.altlink);
     const exAlt = parseLinks(val['ex-altlink']);
-    const domains = val.domains ? val.domains.split(/[\s,#]+/).filter(Boolean) : [];
-    const info = strip(val.info);
+    const domains = typeof val.domains === 'string' ? val.domains.split(/[\s,#]+/).filter(Boolean) : [];
+    const info = typeof val.info === 'string' ? strip(val.info) : '';
 
     const isDead = isExplicitlyDead(val['ex-DEAD'])
       || neg.some(n => /dead|shutdown|discontinued|defunct|offline|closed|shut down/i.test(n))
@@ -203,7 +229,7 @@ export async function fetchEverythingMoeData(): Promise<{ sites: SiteItem[]; sec
       domains,
       isLowSec: false,
       isDead,
-      iconUrl: val.icon || `https://static.everythingmoe.com/icons/${cleanIconId(key)}.png`
+      iconUrl: typeof val.icon === 'string' ? val.icon : `https://static.everythingmoe.com/icons/${cleanIconId(key)}.png`
     });
 
     counts[curSec] = (counts[curSec] || 0) + 1;

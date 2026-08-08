@@ -78,7 +78,7 @@ export function matchesTagFilters(site: IndexedSiteItem, activeTagFilters: Set<s
     if (tag === 'softsubs') return combined.includes('soft');
     if (tag === 'hardsubs') return combined.includes('hard');
     if (tag === 'dub') return combined.includes('dub');
-    if (tag === 'no-ads') return combined.includes('no ad') || combined.includes('clean') || !site.negative.some(n => n.toLowerCase().includes('ad'));
+    if (tag === 'no-ads') return (combined.includes('no ad') || combined.includes('clean') || combined.includes('ad-free') || site.positive.some(p => /no ad|clean|ad-free|no-ad/i.test(p))) && !site.negative.some(n => /ad|popup|banner/i.test(n));
     if (tag === 'high-quality') return combined.includes('quality') || combined.includes('1080p') || combined.includes('hd') || combined.includes('4k');
     if (tag === 'direct') return combined.includes('direct') || combined.includes('stream') || combined.includes('fast');
     if (tag === 'large-library') return combined.includes('library') || combined.includes('large');
@@ -265,14 +265,14 @@ function updateCategoryBar() {
   const isAllActive = activeSectionId === 'all' || (activeSectionId === 'category' && selectedCategoryIds.size === 0);
 
   categoryBar.innerHTML = `
-    <button class="cat-pill ${isAllActive ? 'active' : ''}" data-section="all" aria-pressed="${isAllActive}">All Sites <span class="cat-pill-count">${allCount}</span></button>
-    <button class="cat-pill ${activeSectionId === 'favorites' ? 'active' : ''}" data-section="favorites" aria-pressed="${activeSectionId === 'favorites'}">${icons.star(14, activeSectionId === 'favorites')} Bookmarks <span class="cat-pill-count">${favCount}</span></button>
+    <button class="cat-pill ${isAllActive ? 'active' : ''}" data-section="all" aria-pressed="${isAllActive}" title="Show all site listings">All Sites <span class="cat-pill-count">${allCount}</span></button>
+    <button class="cat-pill ${activeSectionId === 'favorites' ? 'active' : ''}" data-section="favorites" aria-pressed="${activeSectionId === 'favorites'}" title="Show bookmarked sites"> ${icons.star(14, activeSectionId === 'favorites')} Bookmarks <span class="cat-pill-count">${favCount}</span></button>
     ${allSections.map(sec => {
       const catCount = getFilteredSites(allSites, { ...baseFilter, sectionId: 'category', selectedCategoryIds: new Set([sec.id]) }).length;
       const isCatActive = selectedCategoryIds.has(sec.id);
-      return `<button class="cat-pill ${isCatActive ? 'active' : ''}" data-section="${sec.id}" aria-pressed="${isCatActive}">${getSectionIcon(sec.id, 14)} ${escapeHtml(sec.title)} <span class="cat-pill-count">${catCount}</span></button>`;
+      return `<button class="cat-pill ${isCatActive ? 'active' : ''}" data-section="${sec.id}" aria-pressed="${isCatActive}" title="Filter by ${escapeHtml(sec.title)}. Ctrl/Cmd/Shift + Click for multi-select">${getSectionIcon(sec.id, 14)} ${escapeHtml(sec.title)} <span class="cat-pill-count">${catCount}</span></button>`;
     }).join('')}
-    <button class="cat-pill ${activeSectionId === 'dead' ? 'active' : ''}" data-section="dead" aria-pressed="${activeSectionId === 'dead'}">${getSectionIcon('dead', 14)} Dead / Offline <span class="cat-pill-count">${deadCount}</span></button>
+    <button class="cat-pill ${activeSectionId === 'dead' ? 'active' : ''}" data-section="dead" aria-pressed="${activeSectionId === 'dead'}" title="Show dead or discontinued sites">${getSectionIcon('dead', 14)} Dead / Offline <span class="cat-pill-count">${deadCount}</span></button>
   `;
 
   categoryBar.querySelectorAll('.cat-pill').forEach(btn => {
@@ -399,8 +399,8 @@ function renderFilteredContent() {
     ${loadMoreHTML}
   `;
 
-  document.getElementById('load-more-btn')?.addEventListener('click', () => {
-    const grid = contentContainer.querySelector('.site-grid');
+  function bindLoadMore() {
+    const grid = contentContainer?.querySelector('.site-grid');
     if (grid) {
       const startIdx = displayedItemCount;
       displayedItemCount += ITEMS_PER_PAGE;
@@ -415,10 +415,7 @@ function renderFilteredContent() {
       const loadMoreWrapper = document.getElementById('load-more-wrapper');
       if (remaining > 0 && loadMoreWrapper) {
         loadMoreWrapper.innerHTML = `<button class="btn btn-primary" id="load-more-btn" style="padding: 12px 28px; font-size: 14px;">Load More (${remaining} remaining)</button>`;
-        // re-bind click listener
-        document.getElementById('load-more-btn')?.addEventListener('click', () => {
-          renderFilteredContent();
-        });
+        document.getElementById('load-more-btn')?.addEventListener('click', bindLoadMore);
       } else {
         loadMoreWrapper?.remove();
       }
@@ -427,16 +424,17 @@ function renderFilteredContent() {
       displayedItemCount += ITEMS_PER_PAGE;
       renderFilteredContent();
     }
-  });
+  }
+
+  document.getElementById('load-more-btn')?.addEventListener('click', bindLoadMore);
 
   attachDynamicCardListeners();
 }
 
 function replaceWithAvatar(img: HTMLImageElement) {
   const name = img.getAttribute('data-site-name') || 'M';
-  const isSmall = img.getAttribute('data-is-small') === 'true';
   const avatarEl = document.createElement('div');
-  avatarEl.className = isSmall ? 'site-logo-avatar-sm' : 'site-logo-avatar';
+  avatarEl.className = 'site-logo-avatar';
   avatarEl.style.cssText = getAvatarStyle(name);
   avatarEl.textContent = name.charAt(0).toUpperCase();
   img.replaceWith(avatarEl);
@@ -575,7 +573,7 @@ function attachStaticEventListeners() {
 
     contentContainer.addEventListener('error', e => {
       const img = e.target as HTMLImageElement | null;
-      if (!img || (!img.classList.contains('site-logo') && !img.classList.contains('site-logo-sm'))) return;
+      if (!img || !img.classList.contains('site-logo')) return;
 
       const fallbackIcon = img.getAttribute('data-fallback-icon');
       if (fallbackIcon && img.src !== fallbackIcon) {

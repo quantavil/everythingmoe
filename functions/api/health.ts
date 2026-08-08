@@ -1,3 +1,26 @@
+function isSafeUrl(targetUrl: URL): boolean {
+  if (targetUrl.protocol !== 'http:' && targetUrl.protocol !== 'https:') return false;
+  const hostname = targetUrl.hostname.toLowerCase();
+  if (hostname === 'localhost' || hostname.endsWith('.local') || hostname.endsWith('.internal')) return false;
+
+  const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  const match = hostname.match(ipv4Regex);
+  if (match) {
+    const [, a, b] = match.map(Number);
+    if (a === 0 || a === 127) return false;
+    if (a === 10) return false;
+    if (a === 172 && b >= 16 && b <= 31) return false;
+    if (a === 192 && b === 168) return false;
+    if (a === 169 && b === 254) return false;
+  }
+
+  if (hostname === '[::1]' || hostname === '::1' || hostname.startsWith('fe80:') || hostname.startsWith('fc00:') || hostname.startsWith('fd00:')) {
+    return false;
+  }
+
+  return true;
+}
+
 export async function onRequest(context: { request: Request }): Promise<Response> {
   const urlParam = new URL(context.request.url).searchParams.get('url');
   if (!urlParam) {
@@ -6,6 +29,10 @@ export async function onRequest(context: { request: Request }): Promise<Response
 
   try {
     const targetUrl = new URL(urlParam);
+    if (!isSafeUrl(targetUrl)) {
+      return new Response(JSON.stringify({ error: 'Invalid or restricted URL target' }), { status: 400 });
+    }
+
     const start = Date.now();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3500);
@@ -22,7 +49,7 @@ export async function onRequest(context: { request: Request }): Promise<Response
     clearTimeout(timer);
 
     const pingMs = Date.now() - start;
-    const finalUrl = new URL(res.url);
+    const finalUrl = res.url ? new URL(res.url) : targetUrl;
     const isRedirected = res.redirected || finalUrl.hostname.toLowerCase() !== targetUrl.hostname.toLowerCase();
 
     if (res.ok || res.status < 400) {

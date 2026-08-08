@@ -1,5 +1,5 @@
 import { expect, test, describe } from 'bun:test';
-import { getFilteredSites } from '../main';
+import { getFilteredSites, matchesTagFilters } from '../main';
 import { IndexedSiteItem } from '../search';
 import { getUrlParams } from '../store';
 
@@ -25,7 +25,7 @@ describe('Filter Pipeline (src/main.ts)', () => {
       section: 'hentai',
       categoryName: 'Hentai',
       positive: ['Clean UI'],
-      negative: [],
+      negative: ['Popups', 'Aggressive Ads'],
       info: 'Adult stream',
       altlinks: [{ label: 'Main', url: 'https://hh.com' }],
       domains: ['hh.com'],
@@ -61,10 +61,26 @@ describe('Filter Pipeline (src/main.ts)', () => {
     expect(result[0].id).toBe('site3');
   });
 
-
   test('getUrlParams parses query params accurately', () => {
     const params = getUrlParams();
     expect(params.section).toBe('all');
     expect(params.query).toBe('');
+  });
+
+  test('matchesTagFilters correctly filters no-ads sites', () => {
+    const noAdsFilter = new Set(['no-ads']);
+    expect(matchesTagFilters(sampleSites[0], noAdsFilter)).toBe(true);
+    expect(matchesTagFilters(sampleSites[1], noAdsFilter)).toBe(false);
+    expect(matchesTagFilters(sampleSites[2], noAdsFilter)).toBe(false);
+  });
+
+  test('matchesTagFilters correctly filters softsubs sites', () => {
+    const softsubsFilter = new Set(['softsubs']);
+    expect(matchesTagFilters(sampleSites[0], softsubsFilter)).toBe(true);
+    expect(matchesTagFilters(sampleSites[1], softsubsFilter)).toBe(false);
+  });
+
+  test('matchesTagFilters returns true when no tag filters are active', () => {
+    expect(matchesTagFilters(sampleSites[0], new Set())).toBe(true);
   });
 });

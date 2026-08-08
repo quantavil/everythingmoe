@@ -15,12 +15,12 @@ export function getAvatarStyle(name: string): string {
   return `background: linear-gradient(135deg, ${GRADIENTS[idx]}); color: #fff; font-weight: 800;`;
 }
 
-export function renderSiteIcon(site: IndexedSiteItem, isSmall = false): string {
+export function renderSiteIcon(site: IndexedSiteItem): string {
   const cleanId = site.id.replace(/^lowsec_[^_]+_/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const primary = site.iconUrl || `https://static.everythingmoe.com/icons/${cleanId}.png`;
   const domain = getSiteDomain(site);
   const secondary = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64` : '';
-  return `<img src="${escapeUrl(primary)}" alt="${escapeHtml(site.name)}" class="${isSmall ? 'site-logo-sm' : 'site-logo'}" data-site-name="${escapeHtml(site.name)}" data-is-small="${isSmall}" data-fallback-icon="${escapeUrl(secondary)}" />`;
+  return `<img src="${escapeUrl(primary)}" alt="${escapeHtml(site.name)}" class="site-logo" data-site-name="${escapeHtml(site.name)}" data-fallback-icon="${escapeUrl(secondary)}" />`;
 }
 
 function renderStatusBadge(res: AllMirrorsCheckResult | null): string {
@@ -163,7 +163,7 @@ export function renderGridCard(site: IndexedSiteItem, isBookmarked: boolean, ind
             </div>
           </div>
           <div class="site-title-inline">
-            ${renderSiteIcon(site, false)}
+            ${renderSiteIcon(site)}
             <h3 class="card-title">${escapeHtml(site.name)}</h3>
           </div>
         </div>
