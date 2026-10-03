@@ -13,7 +13,8 @@ differently. Comments, corrections and submissions stay on the original site, an
   section notes, pros and cons, mirrors and comment counts.
 - **Section pages.** Click a section title for a full-width list with filters that show how many sites match.
 - **Status checks you ask for.** Expanding a site, or pressing the refresh icon on a panel, asks our edge function whether
-  the links respond. Nothing is probed in the background.
+  the links respond. A site that answered glows green in the list, a moved one glows amber, and a dead one is struck
+  through, so status costs no row space. Nothing is probed in the background.
 - **Saved sites** (stored on your device), light and dark themes, an NSFW switch (off by default), keyboard shortcuts
   (`/`, `F` or `Ctrl/Cmd+K` to search, `Esc` to clear) and offline reading.
 - **Back/Forward and deep links work.** Every view is a URL (`#/s/anime?f=Self-host`, `#/?q=nyaa`).

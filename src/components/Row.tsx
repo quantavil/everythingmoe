@@ -45,19 +45,6 @@ function describe(h: Health | undefined, busy: boolean): { cls: string; label: s
   return { cls: 'down', label: 'No response from our check' };
 }
 
-export function StatusDot({ url, showLabel = false }: { url: string; showLabel?: boolean }) {
-  const state = useComputed(() => ({ h: health.value[url], busy: checking.value.has(url) }));
-  const { h, busy } = state.value;
-  const { cls, label } = describe(h, busy);
-  if (cls === 'none' && !showLabel) return null;
-  return (
-    <span class={`status ${cls}`} title={label}>
-      <span class="dot" role="img" aria-label={label} />
-      {showLabel && <span class="status-text">{label}</span>}
-    </span>
-  );
-}
-
 function normalize(url: string): string {
   return url.replace(/\/+$/, '').toLowerCase();
 }
@@ -184,6 +171,12 @@ export function Row({ item, section, ranges = null, showSection = false }: RowPr
   const key = itemKey(section.id, item.id);
   const openSignal = useComputed(() => expanded.value.has(key));
   const savedSignal = useComputed(() => bookmarks.value.includes(item.id));
+  const statusSignal = useComputed(() => {
+    if (!item.url) return { cls: '', label: '' };
+    const { cls, label } = describe(health.value[item.url], checking.value.has(item.url));
+    return cls === 'none' ? { cls: '', label: '' } : { cls, label };
+  });
+  const rowStatus = statusSignal.value;
   const open = openSignal.value;
   const saved = savedSignal.value;
   const href = item.url || `${UPSTREAM}/s/${encodeURIComponent(item.id)}#comments`;
@@ -201,7 +194,9 @@ export function Row({ item, section, ranges = null, showSection = false }: RowPr
   const hasChips = item.tags.length > 0 || item.torrent || item.nsfw || !item.url;
 
   return (
-    <div class={`item ${open ? 'open' : ''} ${item.low ? 'low' : ''} ${item.licensed ? 'licensed' : ''}`}>
+    <div
+      class={`item ${open ? 'open' : ''} ${item.low ? 'low' : ''} ${item.licensed ? 'licensed' : ''} ${rowStatus.cls ? `is-${rowStatus.cls}` : ''}`}
+    >
       <div class="row">
         <span class="rank" style={topRank ? `color:${RANK_COLORS[item.rank - 1]}` : undefined}>
           {item.rank}.
@@ -214,6 +209,7 @@ export function Row({ item, section, ranges = null, showSection = false }: RowPr
           title={item.licensed ? `${item.name} (licensed, official service)` : undefined}
         >
           <SiteIcon item={item} />
+          {rowStatus.label && <span class="sr-only">{rowStatus.label}. </span>}
           <span class="name">{parts.map((p) => (p.hit ? <mark>{p.text}</mark> : p.text))}</span>
         </a>
         {hasChips && (
@@ -228,7 +224,6 @@ export function Row({ item, section, ranges = null, showSection = false }: RowPr
         )}
         <span class="grow" />
         {showSection && <span class="where">{section.short}</span>}
-        {item.url && <StatusDot url={item.url} />}
         <button
           type="button"
           class={`icon-btn star ${saved ? 'on' : ''}`}

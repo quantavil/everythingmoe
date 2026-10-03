@@ -270,8 +270,14 @@ kbd { font-family: var(--mono); }
 .status.moved .dot { background: var(--warn); border-color: var(--warn); }
 .status.down .dot { background: transparent; border-color: var(--down); }
 .status.checking .dot { border-color: var(--text-3); animation: pulse 1s ease-in-out infinite; }
-.status-text { font-size: 12.5px; color: var(--text-2); }
-.row > .status { padding-inline: 6px; }
+
+/* Status lives in the name itself: a soft glow when the site answered, amber when it moved, struck through when it did not. */
+.is-up .name { text-shadow: 0 0 14px color-mix(in oklab, var(--up) 70%, transparent), 0 0 3px color-mix(in oklab, var(--up) 45%, transparent); }
+.is-moved .name { text-shadow: 0 0 14px color-mix(in oklab, var(--warn) 70%, transparent), 0 0 3px color-mix(in oklab, var(--warn) 45%, transparent); }
+.is-down .name { color: var(--text-3); text-decoration: line-through; text-decoration-color: var(--down); text-decoration-thickness: 1.5px; }
+.is-checking .name { animation: pulse 1s ease-in-out infinite; }
+[data-theme='light'] .is-up .name { text-shadow: none; color: var(--up); }
+[data-theme='light'] .is-moved .name { text-shadow: none; color: var(--warn); }
 
 .star.on { color: var(--gold); }
 @media (hover: hover) {
@@ -389,12 +395,6 @@ kbd { font-family: var(--mono); }
 .footer a { color: var(--text-2); text-decoration: underline; text-underline-offset: 2px; }
 
 /* ------------------------------------------------------------ responsive */
-
-@container (max-width: 420px) {
-  .row { flex-wrap: wrap; row-gap: 0; }
-  .name-link { flex: 1 1 0; }
-  .chips { order: 9; flex: 0 0 100%; max-height: none; margin: -4px 0 0; padding: 0 0 9px 76px; }
-}
 
 @container (max-width: 420px) {
   .panel-tools .open-btn { display: none; }
