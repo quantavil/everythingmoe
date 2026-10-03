@@ -15,6 +15,7 @@ import {
   syncFromUrl
 } from '../state';
 import { nsfw, startPersistence } from '../store';
+import { legacyHash } from '../url';
 import { Header, searchInput } from './Header';
 import { SectionBar } from './SectionBar';
 import { SectionsSheet } from './SectionsSheet';
@@ -50,6 +51,8 @@ function isTyping(el: Element | null): boolean {
 export function App() {
   useEffect(() => {
     startPersistence();
+    const legacy = location.hash ? null : legacyHash(location.search);
+    if (legacy) history.replaceState(null, '', `${location.pathname}${legacy}`);
     syncFromUrl();
     const sync = () => syncFromUrl();
     window.addEventListener('popstate', sync);

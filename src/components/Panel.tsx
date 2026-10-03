@@ -1,3 +1,4 @@
+import { useComputed } from '@preact/signals';
 import { ChevronDown, Filter, Maximize2, RefreshCw, Skull } from 'lucide-preact';
 import { useState } from 'preact/hooks';
 import { checkMany } from '../health';
@@ -14,6 +15,7 @@ import {
 } from '../state';
 import { collapsed, rowsPerPanel, toggleCollapsed } from '../store';
 import { SectionIcon } from './icons';
+import { memo } from './memo';
 import { Row } from './Row';
 
 function linkGraveyard(text: string) {
@@ -81,9 +83,15 @@ export function FilterChips({
   );
 }
 
-export function Panel({ section }: { section: Section }) {
-  const isCollapsed = collapsed.value.includes(section.id);
-  const active = panelFilters.value[section.id] ?? [];
+const NO_FILTERS: string[] = [];
+
+function PanelView({ section }: { section: Section }) {
+  // Each panel listens only to its own slice, so changing one panel does not re-render the other 23.
+  const collapsedSignal = useComputed(() => collapsed.value.includes(section.id));
+  const activeSignal = useComputed(() => panelFilters.value[section.id] ?? NO_FILTERS);
+  const lowSignal = useComputed(() => low.value[section.id]);
+  const isCollapsed = collapsedSignal.value;
+  const active = activeSignal.value;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [extra, setExtra] = useState(0);
   const [lowOpen, setLowOpen] = useState(false);
@@ -94,7 +102,7 @@ export function Panel({ section }: { section: Section }) {
   const shown = top.slice(0, limit);
   const hidden = top.length - shown.length;
 
-  const lowState = low.value[section.id];
+  const lowState = lowSignal.value;
   const lowTotal =
     lowState?.status === 'ready' ? lowItems(section).length : Math.max(section.count - section.items.length, 0);
   const lowRows = lowOpen && hidden === 0 ? lowItems(section).filter((i) => matchesFilters(i, activeSet)) : [];
@@ -225,3 +233,5 @@ export function Panel({ section }: { section: Section }) {
     </section>
   );
 }
+
+export const Panel = memo(PanelView);

@@ -16,6 +16,17 @@ export interface Hit {
 
 const fuzzy = new uFuzzy({ intraMode: 1, intraIns: 1 });
 
+// The two haystacks only change when the doc list does, not on every keystroke.
+const haystacks = new WeakMap<Doc[], { names: string[]; texts: string[] }>();
+function haystackFor(docs: Doc[]) {
+  let h = haystacks.get(docs);
+  if (!h) {
+    h = { names: docs.map((d) => d.item.name), texts: docs.map((d) => d.text) };
+    haystacks.set(docs, h);
+  }
+  return h;
+}
+
 export function buildDoc(sectionId: string, item: Item, detail?: Detail): Doc {
   const bits = [item.name, ...item.tags, ...item.filters];
   if (item.url) bits.push(item.url);
@@ -33,7 +44,7 @@ export function searchDocs(docs: Doc[], query: string): Hit[] {
   const hits: Hit[] = [];
   const seen = new Set<number>();
 
-  const names = docs.map((d) => d.item.name);
+  const { names, texts } = haystackFor(docs);
   const [idxs, info, order] = fuzzy.search(names, needle);
   if (idxs && info && order) {
     for (const o of order) {
@@ -48,10 +59,7 @@ export function searchDocs(docs: Doc[], query: string): Hit[] {
     }
   }
 
-  const [rest, restInfo, restOrder] = fuzzy.search(
-    docs.map((d) => d.text),
-    needle
-  );
+  const [rest, restInfo, restOrder] = fuzzy.search(texts, needle);
   if (rest) {
     const ordered = restInfo && restOrder ? restOrder.map((o) => restInfo.idx[o]) : rest;
     for (const i of ordered) if (!seen.has(i)) hits.push({ doc: docs[i], ranges: null });

@@ -1,6 +1,6 @@
 import { Skull, Star } from 'lucide-preact';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { searchDocs } from '../search';
+import { type Doc, searchDocs } from '../search';
 import { type Item, matchesFilters, type Section, UPSTREAM } from '../shared/home';
 import {
   clearSectionFilters,
@@ -17,6 +17,7 @@ import {
   query,
   sectionFilters,
   sections,
+  term,
   toggleSectionFilter,
   topItems
 } from '../state';
@@ -46,13 +47,16 @@ function useColumnCount(ref: { current: HTMLElement | null }): number {
   return count;
 }
 
-/** Shortest-column-first, so reading order stays left-to-right across the first row. */
+/**
+ * Shortest-column-first, so reading order stays left-to-right across the first row. The estimate ignores collapsed
+ * and expanded state on purpose: re-homing a panel remounts all of its rows, so it only happens when the column
+ * count or the rows-per-list setting changes.
+ */
 function distribute(list: Section[], columns: number, rows: number): Section[][] {
   const out: Section[][] = Array.from({ length: columns }, () => []);
   const height = new Array<number>(columns).fill(0);
   for (const s of list) {
-    const isCollapsed = collapsed.value.includes(s.id);
-    const est = 56 + (isCollapsed ? 0 : Math.min(topItems(s).length, rows) * 40 + 48);
+    const est = 56 + Math.min(topItems(s).length, rows) * 40 + 48;
     const target = height.indexOf(Math.min(...height));
     out[target].push(s);
     height[target] += est + GAP;
@@ -381,14 +385,28 @@ export function SavedView() {
 
 const PER_GROUP = 6;
 
+const NO_DOCS: Doc[] = [];
+
 export function SearchView() {
-  const q = query.value;
+  const typed = query.value.trim();
+  const q = term.value.trim();
+  const searchable = q.length >= 2;
   const [showAll, setShowAll] = useState<Record<string, boolean>>({});
-  const allDocs = docs.value;
-  const hits = useMemo(() => searchDocs(allDocs, q), [allDocs, q]);
+  // One letter matches almost everything and costs the most, so wait for two.
+  const allDocs = searchable ? docs.value : NO_DOCS;
+  const hits = useMemo(() => (searchable ? searchDocs(allDocs, q) : []), [searchable, allDocs, q]);
   const loadingLow = sections.value.some(
     (s) => s.lowId && low.value[s.id]?.status !== 'ready' && low.value[s.id]?.status !== 'error'
   );
+
+  if (!searchable) {
+    return (
+      <div class="state compact">
+        <h2>{typed ? 'Keep typing' : 'Search'}</h2>
+        <p>{typed ? 'Type at least two letters.' : 'Search names, tags such as “DDL”, and notes.'}</p>
+      </div>
+    );
+  }
 
   const bySection = new Map<string, typeof hits>();
   for (const h of hits) {
@@ -401,8 +419,9 @@ export function SearchView() {
   return (
     <article class="focus">
       <header class="focus-head">
-        <h1>Results for “{q.trim()}”</h1>
+        <h1>Results for “{q}”</h1>
         <p class="focus-meta">
+          {typed !== q ? 'Updating… ' : ''}
           {hits.length} {hits.length === 1 ? 'match' : 'matches'}
           {loadingLow && ' · still searching low ranks…'}
         </p>

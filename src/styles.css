@@ -198,6 +198,7 @@ kbd { font-family: var(--mono); }
   background: var(--bg-2); border: 1px solid color-mix(in oklab, var(--sec, var(--line)) 40%, var(--line)); border-radius: 14px; overflow: clip;
   scroll-margin-top: var(--sticky);
 }
+.column > .panel { content-visibility: auto; contain-intrinsic-size: auto 640px; }
 .panel-head {
   display: flex; align-items: center; min-height: 50px; padding-inline: 4px 6px;
   background: linear-gradient(180deg, color-mix(in oklab, var(--panel-head) 100%, white 5%), var(--panel-head));
@@ -271,9 +272,15 @@ kbd { font-family: var(--mono); }
 .status.down .dot { background: transparent; border-color: var(--down); }
 .status.checking .dot { border-color: var(--text-3); animation: pulse 1s ease-in-out infinite; }
 
-/* Status lives in the name itself: a soft glow when the site answered, amber when it moved, struck through when it did not. */
-.is-up .name { text-shadow: 0 0 14px color-mix(in oklab, var(--up) 70%, transparent), 0 0 3px color-mix(in oklab, var(--up) 45%, transparent); }
-.is-moved .name { text-shadow: 0 0 14px color-mix(in oklab, var(--warn) 70%, transparent), 0 0 3px color-mix(in oklab, var(--warn) 45%, transparent); }
+/* Status lives in the name itself: a clear glow when the site answered, amber when it moved, struck through when it did not. */
+.is-up .name {
+  color: color-mix(in oklab, var(--text) 80%, var(--up));
+  text-shadow: 0 0 7px color-mix(in oklab, var(--up) 90%, transparent), 0 0 18px color-mix(in oklab, var(--up) 65%, transparent);
+}
+.is-moved .name {
+  color: color-mix(in oklab, var(--text) 80%, var(--warn));
+  text-shadow: 0 0 7px color-mix(in oklab, var(--warn) 90%, transparent), 0 0 18px color-mix(in oklab, var(--warn) 65%, transparent);
+}
 .is-down .name { color: var(--text-3); text-decoration: line-through; text-decoration-color: var(--down); text-decoration-thickness: 1.5px; }
 .is-checking .name { animation: pulse 1s ease-in-out infinite; }
 [data-theme='light'] .is-up .name { text-shadow: none; color: var(--up); }

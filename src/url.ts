@@ -35,3 +35,17 @@ export function toHash(state: UrlState): string {
   const qs = params.toString();
   return `#${path}${qs ? `?${qs}` : ''}`;
 }
+
+/**
+ * Old builds used query strings (?section=anime&q=nyaa&lowsec=false). Turn those into the equivalent hash route so
+ * existing bookmarks and shared links still land in the right place.
+ */
+export function legacyHash(search: string): string | null {
+  const params = new URLSearchParams(search);
+  const section = (params.get('section') ?? '').split(',')[0].trim().toLowerCase();
+  const query = params.get('q') ?? '';
+  if (!section && !query.trim()) return null;
+  const known = /^[a-z0-9_-]+$/.test(section) && !['all', 'favorites', 'dead', 'category'].includes(section);
+  const id = section === 'tracker' ? 'database' : section;
+  return toHash({ route: known ? { view: 'section', id } : { view: 'home' }, query, filters: [] });
+}

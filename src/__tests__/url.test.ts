@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { parseHash, toHash } from '../url';
+import { legacyHash, parseHash, toHash } from '../url';
 
 describe('url state', () => {
   test('empty hash is the overview', () => {
@@ -27,5 +27,25 @@ describe('url state', () => {
 
   test('filters only travel with a section page', () => {
     expect(toHash({ route: { view: 'saved' }, query: '', filters: ['x'] })).toBe('#/saved');
+  });
+});
+
+describe('legacy query-string links', () => {
+  test('section and search map to the hash route', () => {
+    expect(legacyHash('?lowsec=false&section=hentairead')).toBe('#/s/hentairead');
+    expect(legacyHash('?section=anime&q=nyaa')).toBe('#/s/anime?q=nyaa');
+    expect(legacyHash('?q=ani')).toBe('#/?q=ani');
+  });
+
+  test('old multi-select keeps the first category and renamed ids follow', () => {
+    expect(legacyHash('?section=manga,novel')).toBe('#/s/manga');
+    expect(legacyHash('?section=tracker')).toBe('#/s/database');
+  });
+
+  test('pseudo sections and unrelated params are ignored', () => {
+    expect(legacyHash('?section=favorites')).toBe('#/');
+    expect(legacyHash('?lowsec=true')).toBeNull();
+    expect(legacyHash('')).toBeNull();
+    expect(legacyHash('?section=../x')).toBe('#/');
   });
 });

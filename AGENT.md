@@ -28,6 +28,20 @@ Parity with the original comes first: if something the original shows is missing
 - CSS custom properties that derive from `--sec` must be declared on the element that sets `--sec`. Declared on `:root`
   they resolve once with `--sec` unset and every panel loses its tint.
 
+## Performance rules (measured at 4x CPU throttle)
+- Never let collapsed/expanded state feed the column distribution in `HomeView`. Re-homing a panel remounts all its
+  rows. Collapsing a panel went from ~1s to ~0.1s once that dependency was removed.
+- `Panel` and `Row` are wrapped in `memo`, and each panel subscribes only to its own slice of shared signals
+  (`useComputed`). Reading `collapsed.value` or `panelFilters.value` directly re-renders all 24 panels.
+- `loadAllLow` publishes once. Every update to `low` rebuilds the search docs, so per-list updates made the first
+  keystrokes take 0.5-1s.
+- Search waits for 2 letters and ~140ms of quiet (`term` signal). One letter matches nearly everything.
+- `content-visibility: auto` on home panels: ~180ms faster first paint, scroll-to-section still lands exactly.
+- Tried and dropped: `<link rel="preload" as="fetch" href="/api/home">`. No gain, and wrong for users with NSFW on.
+
+## Links
+- Old builds used `?section=anime&q=nyaa&lowsec=false`. `legacyHash` in `src/url.ts` rewrites those to hash routes.
+
 ## Testing
 - `bun test` is hermetic. Parser tests use real saved markup in `src/__tests__/fixtures/`.
 - To check the UI in a browser without network, serve `dist/` and answer `/api/*` by importing the Function modules

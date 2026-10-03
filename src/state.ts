@@ -62,27 +62,41 @@ export interface LowState {
 /** Low-rank lists by section id. */
 export const low = signal<Record<string, LowState>>({});
 
+async function fetchLowState(section: Section): Promise<LowState> {
+  try {
+    const { items, dead } = parseLow(await fetchLow(section.lowId as string), section.lowStart);
+    return { status: 'ready', items, dead };
+  } catch {
+    return { status: 'error', items: [], dead: [] };
+  }
+}
+
+const LOADING: LowState = { status: 'loading', items: [], dead: [] };
+
 export async function loadLow(section: Section) {
   if (!section.lowId) return;
   const current = low.value[section.id];
   if (current && current.status !== 'error') return;
-  low.value = { ...low.value, [section.id]: { status: 'loading', items: [], dead: [] } };
-  try {
-    const raw = await fetchLow(section.lowId);
-    const { items, dead } = parseLow(raw, section.lowStart);
-    low.value = { ...low.value, [section.id]: { status: 'ready', items, dead } };
-  } catch {
-    low.value = { ...low.value, [section.id]: { status: 'error', items: [], dead: [] } };
-  }
+  low.value = { ...low.value, [section.id]: LOADING };
+  const result = await fetchLowState(section);
+  low.value = { ...low.value, [section.id]: result };
 }
 
+/**
+ * Fetch every low-rank list for search. Results are published once, not as each list arrives, because every
+ * update rebuilds the search index.
+ */
 export async function loadAllLow() {
   const pending = (home.value?.sections ?? []).filter((s) => s.lowId && !low.value[s.id]);
+  if (!pending.length) return;
+  low.value = { ...low.value, ...Object.fromEntries(pending.map((s) => [s.id, LOADING])) };
+  const results: Record<string, LowState> = {};
   const queue = [...pending];
   const worker = async () => {
-    for (let s = queue.shift(); s; s = queue.shift()) await loadLow(s);
+    for (let s = queue.shift(); s; s = queue.shift()) results[s.id] = await fetchLowState(s);
   };
   await Promise.all([worker(), worker(), worker(), worker()]);
+  low.value = { ...low.value, ...results };
 }
 
 /* ------------------------------------------------------- derived lists */
@@ -136,6 +150,7 @@ export function syncFromUrl() {
   batch(() => {
     route.value = parsed.route;
     query.value = parsed.query;
+    term.value = parsed.query;
     sectionFilters.value = parsed.filters;
   });
 }
@@ -168,10 +183,20 @@ export function clearSectionFilters() {
 }
 
 let urlTimer: ReturnType<typeof setTimeout> | undefined;
+/** What the search view actually searches: the query, a moment after typing stops. */
+export const term = signal('');
+let termTimer: ReturnType<typeof setTimeout> | undefined;
+
 export function setQuery(q: string) {
   query.value = q;
   clearTimeout(urlTimer);
   urlTimer = setTimeout(() => writeUrl(currentUrl(), true), 250);
+  clearTimeout(termTimer);
+  if (q.trim())
+    termTimer = setTimeout(() => {
+      term.value = q;
+    }, 140);
+  else term.value = '';
 }
 
 export function togglePanelFilter(sectionId: string, filter: string) {

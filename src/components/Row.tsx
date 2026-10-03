@@ -6,6 +6,7 @@ import { splitByRanges } from '../search';
 import { type Item, RANK_COLORS, type Section, UPSTREAM } from '../shared/home';
 import { commentCount, expanded, getDetail, itemKey, rawDetails, toggleExpanded } from '../state';
 import { bookmarks, toggleBookmark } from '../store';
+import { memo } from './memo';
 
 function hue(name: string): number {
   let h = 0;
@@ -167,7 +168,7 @@ interface RowProps {
   showSection?: boolean;
 }
 
-export function Row({ item, section, ranges = null, showSection = false }: RowProps) {
+function RowView({ item, section, ranges = null, showSection = false }: RowProps) {
   const key = itemKey(section.id, item.id);
   const openSignal = useComputed(() => expanded.value.has(key));
   const savedSignal = useComputed(() => bookmarks.value.includes(item.id));
@@ -247,3 +248,5 @@ export function Row({ item, section, ranges = null, showSection = false }: RowPr
     </div>
   );
 }
+
+export const Row = memo(RowView);
