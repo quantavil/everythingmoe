@@ -1,0 +1,31 @@
+{
+ "reanime": {
+  "positive": "Modern interface#Reliable server#Rich subtitle typesetting#Actively updated#Medium-large library",
+  "altlink": ".cz<<https://reanime.cz/home#.wtf<<https://reanime.wtf/home#mirrors<<https://reindex.to/",
+  "domains": "stronghole.site",
+  "info": "note: Multi quality not available on every anime yet."
+ },
+ "miruro": {
+  "positive": "Multiple sources & language#Large library#Modern interface#Long track record",
+  "negative": "Some stream server issues recently",
+  "altlink": ".ru<<https://www.miruro.ru/#.bz<<https://www.miruro.bz/#.tv<<https://www.miruro.tv/#mirrors<<https://www.miruro.com/",
+  "exx-info": "note: animeuwutv is a fork / clone made by other people.",
+  "ex-info": "note: animeyee is a fork / clone made by other people.",
+  "info": "note: Scraper but then self host the stream on most servers.",
+  "ex-altlink": ".online<<https://www.miruro.online/#animeyee<<https://www.animeyee.lol/#animeuwutv<<https://animeuwutv.com/#Git repo<<https://github.com/Miruro-no-kuon/Miruro-no-Kuon"
+ },
+ "animepahe": {
+  "positive": "Update and select the best video source/sub release#Medium-large library#Simple & consistent video player#Small data usage#Long track record",
+  "negative": "Barebone site features#Add watermark",
+  "info": "note: Provides dub, but only visible in episode page and dub is not their priority.",
+  "altlink": ".com<<https://animepahe.com#.org<<https://animepahe.org#Enhancer<<https://github.com/abdullahkhfb/animepahe-enhancer#A-Z list<<https://animepahe.pw/anime",
+  "ex-altlink": ".ru<<https://animepahe.ru#.si<<https://animepahe.si",
+  "domains": "owocdn.top"
+ },
+ "nyaasi": {
+  "positive": "Largest anime-related torrent site#Various otaku related contents available, not just anime#High activity & seeders#Very old & trusted site",
+  "negative": "Closed registration#Provides only basic information#Torrent only",
+  "altlink": "nsfw<<https://sukebei.nyaa.si#.one<<https://nyaa.iss.one/#.ink<<https://nyaa.iss.ink/#.land<<https://nyaa.land/",
+  "info": "note: Other domains are proxy run by third parties"
+ }
+}

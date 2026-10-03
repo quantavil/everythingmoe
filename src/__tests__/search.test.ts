@@ -1,62 +1,65 @@
-import { expect, test, describe } from 'bun:test';
-import { indexSites, searchSites } from '../search';
-import { SiteItem } from '../types';
+import { describe, expect, test } from 'bun:test';
+import { buildDoc, searchDocs, splitByRanges } from '../search';
+import type { Detail, Item } from '../shared/home';
 
-describe('Search Engine (src/search.ts)', () => {
-  const sampleSites: SiteItem[] = [
-    {
-      id: 'aniwave',
-      name: 'AniWave',
-      section: 'anime',
-      categoryName: 'Anime Streaming',
-      positive: ['Ad-Free', '1080p'],
-      negative: [],
-      info: 'Popular anime streaming portal',
-      altlinks: [{ label: 'AniWave Official', url: 'https://aniwave.to' }],
-      domains: ['aniwave.to'],
-      isLowSec: false,
-      isDead: false
-    },
-    {
-      id: 'mangadex',
-      name: 'MangaDex',
-      section: 'manga',
-      categoryName: 'Manga & Webtoons',
-      positive: ['Clean UI', 'No Ads'],
-      negative: [],
-      info: 'Open source manga reader platform',
-      altlinks: [{ label: 'MangaDex Main', url: 'https://mangadex.org' }],
-      domains: ['mangadex.org'],
-      isLowSec: false,
-      isDead: false
-    }
-  ];
+const item = (id: string, name: string, extra: Partial<Item> = {}): Item => ({
+  id,
+  name,
+  rank: 1,
+  url: `https://${id}.example`,
+  icon: '',
+  tags: [],
+  filters: [],
+  licensed: false,
+  torrent: false,
+  nsfw: false,
+  low: false,
+  ...extra
+});
+const detail = (note: string): Detail => ({ positive: [], negative: [], note, mirrors: [], extra: [], dead: '' });
 
-  test('indexSites pre-computes lowercase search index strings', () => {
-    const indexed = indexSites(sampleSites);
-    expect(indexed.length).toBe(2);
-    expect(indexed[0]._searchIndex).toContain('aniwave');
-    expect(indexed[0]._searchIndex).toContain('1080p');
-    expect(indexed[1]._searchIndex).toContain('mangadex.org');
+const docs = [
+  buildDoc('anime', item('miruro', 'Miruro', { filters: ['Scraper'] })),
+  buildDoc('anime', item('animepahe', 'animepahe')),
+  buildDoc('download', item('nyaa', 'Nyaa', { tags: ['DDL'], torrent: true })),
+  buildDoc('anime', item('other', 'Other Site'), detail('great for watching Miruro releases'))
+];
+
+describe('searchDocs', () => {
+  test('finds by name and ranks name matches before note matches', () => {
+    const hits = searchDocs(docs, 'miruro');
+    expect(hits[0].doc.item.id).toBe('miruro');
+    expect(hits.map((h) => h.doc.item.id)).toContain('other');
+    expect(hits.findIndex((h) => h.doc.item.id === 'other')).toBeGreaterThan(0);
   });
 
-  test('searchSites filters accurately based on single token', () => {
-    const indexed = indexSites(sampleSites);
-    const results = searchSites('manga', indexed);
-    expect(results.length).toBe(1);
-    expect(results[0].id).toBe('mangadex');
+  test('tolerates a single typo', () => {
+    expect(searchDocs(docs, 'miruo').map((h) => h.doc.item.id)).toContain('miruro');
   });
 
-  test('searchSites supports multi-token matching', () => {
-    const indexed = indexSites(sampleSites);
-    const results = searchSites('aniwave 1080p', indexed);
-    expect(results.length).toBe(1);
-    expect(results[0].id).toBe('aniwave');
+  test('finds by tag and by facet', () => {
+    expect(searchDocs(docs, 'ddl').map((h) => h.doc.item.id)).toContain('nyaa');
+    expect(searchDocs(docs, 'scraper').map((h) => h.doc.item.id)).toContain('miruro');
   });
 
-  test('searchSites returns all sites for empty query', () => {
-    const indexed = indexSites(sampleSites);
-    const results = searchSites('   ', indexed);
-    expect(results.length).toBe(2);
+  test('empty query returns nothing', () => {
+    expect(searchDocs(docs, '   ')).toEqual([]);
+  });
+
+  test('provides highlight ranges for name hits', () => {
+    const hit = searchDocs(docs, 'pahe')[0];
+    expect(hit.doc.item.id).toBe('animepahe');
+    expect(splitByRanges('animepahe', hit.ranges).some((p) => p.hit && p.text === 'pahe')).toBe(true);
+  });
+});
+
+describe('splitByRanges', () => {
+  test('alternates plain and matched text', () => {
+    expect(splitByRanges('abcdef', [1, 3])).toEqual([
+      { text: 'a', hit: false },
+      { text: 'bc', hit: true },
+      { text: 'def', hit: false }
+    ]);
+    expect(splitByRanges('abc', null)).toEqual([{ text: 'abc', hit: false }]);
   });
 });

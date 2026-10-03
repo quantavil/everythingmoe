@@ -1,32 +1,6 @@
-export async function onRequest(): Promise<Response> {
-  const upstreamUrls = [
-    'https://everythingmoe.com/dataset.json',
-    'https://everythingmoe.com/data/cache/main.json'
-  ];
+import { cached, proxyJson } from '../../src/shared/proxy';
 
-  for (const url of upstreamUrls) {
-    try {
-      const res = await fetch(url, {
-        headers: {
-          'User-Agent': 'EverythingMoe-Cloudflare-Pages/2.0',
-          'Accept': 'application/json'
-        }
-      });
-      if (res.ok) {
-        const body = await res.text();
-        return new Response(body, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'public, max-age=300, s-maxage=600',
-            'Access-Control-Allow-Origin': '*'
-          }
-        });
-      }
-    } catch {}
-  }
+type Ctx = Parameters<typeof cached>[0];
 
-  return new Response(JSON.stringify({ error: 'Upstream dataset fetch failed' }), {
-    status: 502,
-    headers: { 'Content-Type': 'application/json' }
-  });
-}
+/** Per-site details (pros, cons, note, mirrors) keyed by site id. */
+export const onRequest = (ctx: Ctx) => cached(ctx, () => proxyJson(['/data/cache/main.json'], 600));

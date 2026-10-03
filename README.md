@@ -1,85 +1,83 @@
-# 🚀 EverythingMoe 2.0 - Ultimate Otaku Resource Directory
+# EverythingMoe viewer
 
-> An ultra-fast, zero-bloat, 100% type-safe catalog indexing **1,200+ main & lower-security sites** across **18 categories**, featuring **Cloudflare Pages edge proxy functions**, **PWA Network-First offline caching**, **per-mirror live status checking**, **ping latency measurement**, **interactive health rechecking**, **Editorial Luxury Grid UI**, and **zero-dependency search**.
+An unofficial, faster way to browse [EverythingMoe](https://everythingmoe.com)'s ranked lists of anime, manga, novel,
+music and other otaku sites. Rankings, notes and reviews all belong to EverythingMoe. This project only presents them
+differently. Comments, corrections and submissions stay on the original site, and the viewer links there.
 
----
+## What it adds
 
-## 🌐 Cloudflare Edge & Data Pipeline
+- **Everything on one page, in as many columns as fit.** 3 to 4 columns on desktop, 1 on a phone, instead of a fixed two.
+- **Sticky search and section bar.** Search covers every section, including low ranks, with typo tolerance and
+  highlighting. Click a section to jump to it. The "Sections" button opens the full tile grid.
+- **The original's data, kept.** Rank numbers, chips (MULT, DDL, RAW…), curated filters (Self-host, Soft-sub…),
+  section notes, pros and cons, mirrors and comment counts.
+- **Section pages.** Click a section title for a full-width list with filters that show how many sites match.
+- **Status checks you ask for.** Expanding a site, or pressing the refresh icon on a panel, asks our edge function whether
+  the links respond. Nothing is probed in the background.
+- **Saved sites** (stored on your device), light and dark themes, an NSFW switch (off by default), keyboard shortcuts
+  (`/`, `F` or `Ctrl/Cmd+K` to search, `Esc` to clear) and offline reading.
+- **Back/Forward and deep links work.** Every view is a URL (`#/s/anime?f=Self-host`, `#/?q=nyaa`).
 
-1. **Main Catalog API (`/api/dataset`)**:
-   - Cloudflare Pages Function ([functions/api/dataset.ts](file:///home/quantavil/Documents/Project/everythingmoe/functions/api/dataset.ts)) proxies upstream data from `everythingmoe.com`, caching responses at Cloudflare Edge CDN for 10 minutes (`s-maxage=600`) with remote fallback.
-   - Indexes 914+ top-ranked sites across 18 categories, positive/negative tags, descriptions, domains, and mirror links (`altlink`, `ex-altlink`).
-2. **Low-Security Sub-Indexes API (`/api/lowsec?sec={category}`)**:
-   - Cloudflare Pages Function ([functions/api/lowsec.ts](file:///home/quantavil/Documents/Project/everythingmoe/functions/api/lowsec.ts)) lazily loads category sub-indexes (`anime`, `manga`, `manhwa`, `novel`, `donghua`, `apps`, `download`, `music`, `schedule`, `tracker`, `utils`, `wiki`, `artboard`, `vtuber`, `forums`, `drama`, `hentai`, `hentairead`).
-   - Header toggle button (`Low-Ranked Sites`) dynamically enables or hides lower-security/unverified site listings.
-3. **PWA Service Worker Offline Cache**:
-   - Network-First caching strategy ([public/sw.js](file:///home/quantavil/Documents/Project/everythingmoe/public/sw.js)) automatically revalidates live API JSON on page loads while providing 100% offline access when disconnected.
+## Where the data comes from
 
----
+| What | Source | Through |
+| --- | --- | --- |
+| Ranked lists, chips, filters, notes, section colours | EverythingMoe's server-rendered page | `/api/home` (parsed server side) |
+| Pros, cons, notes, mirrors | `/data/cache/main.json` | `/api/dataset` |
+| Low-ranked sites | `/data/lowsec/{section}.json` | `/api/lowsec?sec=` |
+| Comment counts | `/comments/threadcount.json` | `/api/comments` |
 
-## ⚡ Tech Stack & Modular Architecture
+The ranked lists exist only in the page's HTML, so `src/shared/home.ts` parses it. If EverythingMoe changes that markup,
+`/api/home` answers `502 Upstream layout changed` rather than showing wrong data. The parser tests run against saved
+real markup in `src/__tests__/fixtures/`.
 
-- **Runtime & Package Manager**: Bun (`v1.3.14`)
-- **Language**: TypeScript (`v5.7.0` - 100% type-safe)
-- **Bundler & Dev Server**: Vite (`v6.0.0` - ultra-fast HMR builds)
-- **Search Engine**: Pre-indexed zero-dependency multi-term relevance search engine (`0.1ms` execution time)
-- **Modular Architecture**:
-  - `functions/api/dataset.ts`: Cloudflare Pages Edge proxy for the main site dataset.
-  - `functions/api/lowsec.ts`: Cloudflare Pages Edge proxy for low-ranked category bundles.
-  - `src/main.ts`: Entry point orchestrating search debouncing, category tabs, filter drawer, URL deep linking, and `IntersectionObserver` status checks.
-  - `src/components.ts`: Editorial Luxury grid card (`renderGridCard`), skeleton loading templates, site icons, and avatar generators.
-  - `src/health.ts`: 5-minute health status cache (`healthCache`), 2,500-entry capacity, `fetch()` GET probes with fallback favicon probes, and 5-worker concurrency queue (`checkAllMirrorsHealth`).
-  - `src/ui.ts`: String escaping, URL protocol sanitization, domain extraction, and toast notifications.
-  - `src/data.ts`: Multi-tier dataset fetching (`/api/` -> remote origin fallback), fragment-safe link parsing, `isExplicitlyDead` detection, and category mappings.
-  - `src/search.ts`: High-performance multi-term search indexer.
-  - `src/store.ts`: Favorites storage, theme preferences, lowsec toggle state, and URL query parameter deep linking (`tags`, `section`, `q`, `lowsec`).
-- **Styling**: Modern Vanilla CSS (`@layer`) with Editorial Luxury dark/light mode tokens and Google Fonts typography.
+## Stack
 
----
+Preact + `@preact/signals`, Vite, TypeScript, Biome, `@leeoniya/ufuzzy` for search, `lucide-preact` for icons, Geist
+fonts served from the same origin. Cloudflare Pages Functions in `functions/api/` provide the API, with edge caching.
 
-## 🚀 Getting Started
-
-### Prerequisites
-- [Bun](https://bun.sh) (`v1.3+`)
-
-### Installation & Local Development
-
-```bash
-# Install dependencies
-bun install
-
-# Start local dev server
-bun run dev
-
-# Run unit tests
-bun test
-
-# Type check & lint
-bun run check
-bun run lint
+```
+src/shared/home.ts     model + parsers shared by the client and the Functions
+src/shared/proxy.ts    upstream fetch helpers and edge cache
+functions/api/         home, dataset, lowsec, comments, health
+src/state.ts           data, route and derived lists (signals)
+src/store.ts           saved sites, theme, NSFW, rows per list (localStorage)
+src/health.ts          on-demand status checks through /api/health
+src/search.ts          fuzzy index over names, tags, facets and notes
+src/components/        UI
+public/                service worker, manifest, _headers (CSP), _routes.json
 ```
 
-Visit `http://localhost:5173/` in your browser.
-
-### Production Build
+## Develop
 
 ```bash
-# Type check and build production bundle
+bun install
+bun run dev      # Vite serves /api/* by calling the same Function modules as production
+bun test         # parser, search, URL, store and edge-guard tests (no network needed)
+bun run lint     # Biome
+bun run check    # tsc --noEmit
 bun run build
 ```
 
----
+`bun run dev` needs network access to everythingmoe.com for live data.
 
-## 🎯 Key Features
+## Deploy (Cloudflare Pages)
 
-- **🎨 Editorial Luxury Grid Design**: Warm Studio dark obsidian palette with parchment typography, radial gradient mesh ambiance, and double-bezel card styling.
-- **🟢 Per-Mirror Live Status & Card Header Summary**: Cards display real-time mirror health summaries (e.g. `🟢 3/4 Live (38ms)`). Every individual mirror pill button displays its own live status dot (`🟢` or `🔴`) and ping latency.
-- **🔄 Interactive Health Refresh Button**: Click the refresh button (`recheck-health-btn`) on any card to spin the refresh icon, bypass the 5-minute cache, and re-test all mirror links in real time.
-- **🛡️ Dual Probe Reliability (`fetch` + `Image` Favicon Fallback)**: Uses `fetch()` GET probes combined with `Image` favicon asset pings to ensure accurate health detection across Cloudflare CDNs and strict CORS policies.
-- **💀 Dead / Offline Site Separation**: Active sites are displayed under **All Sites**, while dead/discontinued sites are separated into a dedicated `💀 Dead / Offline` category tab.
-- **⚡ 0.1ms Client-Side Search**: Multi-term relevance search over site titles, categories, positive/negative features, and mirror URLs.
-- **🖼️ Multi-Tier PNG & Avatar Icons**: Official site PNG icons with domain favicon fallbacks and dynamic gradient letter avatar badges on 404s.
-- **⚠️ Low-Ranked Sites Toggle**: Instantly view or hide lower-ranked/low-security listings.
-- **📌 Bookmarking & Favorites**: Save preferred resources to local storage with real-time cross-tab sync and corrupt data auto-recovery.
-- **🔗 Comprehensive URL Deep Linking**: Automatically sync search queries, category selections, feature filter chips (`tags`), and lowsec state to URL parameters.
-- **📄 MIT Licensed**: Open source software licensed under the MIT License.
+Build command `bun run build`, output directory `dist`. The `functions/` folder is picked up automatically, and
+`public/_routes.json` limits Function invocations to `/api/*`.
+
+If you edit the inline theme script in `index.html`, update its hash in `public/_headers` (the Content-Security-Policy).
+`src/__tests__/headers.test.ts` fails until you do.
+
+## Privacy and safety
+
+- No analytics, and no requests reporting what you click. (EverythingMoe's own site reports outgoing clicks to itself.
+  This viewer does not.)
+- The browser never contacts a listed site by itself. Status checks go through `/api/health`, which only accepts public
+  hostnames on ports 80 and 443.
+- Site icons load from `static.everythingmoe.com` without a referrer.
+- NSFW sites are hidden until you switch them on. The setting is remembered on your device.
+
+## License
+
+MIT. Data and rankings © EverythingMoe and its contributors.

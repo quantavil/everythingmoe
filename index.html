@@ -2,44 +2,29 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
-    <title>EverythingMoe 2.0</title>
-    <meta name="description" content="The ultimate zero-bloat curated directory for anime, manga, light novels, apps, soundtracks, Japanese learning tools, and otaku resources." />
-    <!-- Open Graph -->
-    <meta property="og:title" content="EverythingMoe 2.0" />
-    <meta property="og:description" content="1,200+ curated anime, manga, light novel, and otaku resources with live mirror health checking." />
+    <title>EverythingMoe</title>
+    <meta name="description" content="A faster, easier way to browse EverythingMoe's ranked lists of anime, manga, novel, music and otaku sites." />
+    <meta property="og:title" content="EverythingMoe" />
+    <meta property="og:description" content="Ranked anime, manga, novel, music and otaku sites with working mirrors, filters and search." />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://everythingmoe.com" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <!-- Favicon & PWA -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#0d0c0b" />
+    <meta name="theme-color" content="#0c0c0e" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <script>
-      (function() {
+      (function () {
         try {
-          var saved = localStorage.getItem('everythingmoe_theme_v2');
-          if (saved === 'light' || saved === 'dark') {
-            document.documentElement.setAttribute('data-theme', saved);
-          } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-            document.documentElement.setAttribute('data-theme', 'light');
-          }
+          if (localStorage.getItem('everythingmoe_theme_v3') === 'light') document.documentElement.setAttribute('data-theme', 'light');
         } catch (e) {}
       })();
     </script>
-    <!-- Fonts: Editorial Luxury typography (Playfair Display + Plus Jakarta Sans + Geist Mono) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,600;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
-    <a href="#content-container" class="sr-only">Skip to content</a>
     <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

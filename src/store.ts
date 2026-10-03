@@ -1,99 +1,85 @@
-import { SECTION_MAPPINGS } from './data';
+import { effect, signal } from '@preact/signals';
 
 const KEYS = {
-  favs: 'everythingmoe_favorites_v2',
-  theme: 'everythingmoe_theme_v2',
-  lowsec: 'everythingmoe_lowsec_v2'
-};
+  theme: 'everythingmoe_theme_v3',
+  nsfw: 'everythingmoe_nsfw_v3',
+  rows: 'everythingmoe_rows_v3',
+  collapsed: 'everythingmoe_collapsed_v3',
+  favs: 'everythingmoe_favorites_v2'
+} as const;
 
-const VALID_SECTION_IDS = new Set([
-  'all', 'favorites', 'dead',
-  ...Object.values(SECTION_MAPPINGS).map(m => m.id)
-]);
-
-const getItem = (key: string) => {
-  try { return localStorage.getItem(key); } catch { return null; }
-};
-const setItem = (key: string, val: string) => {
-  try { localStorage.setItem(key, val); } catch { /* quota / private mode */ }
-};
-
-export function getBookmarks(): string[] {
+function read(key: string): string | null {
   try {
-    const raw = getItem(KEYS.favs);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((i): i is string => typeof i === 'string') : [];
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function write(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* private mode or quota */
+  }
+}
+function readJsonArray(key: string): string[] {
+  try {
+    const parsed = JSON.parse(read(key) ?? '[]');
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
   } catch {
     return [];
   }
 }
 
-export function toggleBookmark(siteId: string): boolean {
-  const current = getBookmarks();
-  const next = current.includes(siteId) ? current.filter(id => id !== siteId) : [...current, siteId];
-  setItem(KEYS.favs, JSON.stringify(next));
-  return next.includes(siteId);
+/** Old builds stored low-rank ids as "lowsec_{section}_{id}". Upstream ids are the stable key now. */
+export function normalizeBookmarkId(id: string): string {
+  return id.replace(/^lowsec_[a-z0-9-]+?_/i, '');
 }
 
-export function getSavedTheme(): 'dark' | 'light' {
-  const saved = getItem(KEYS.theme);
-  if (saved === 'light' || saved === 'dark') return saved;
-  return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+export function normalizeBookmarks(ids: string[]): string[] {
+  return [...new Set(ids.map(normalizeBookmarkId))];
 }
 
-export function setSavedTheme(theme: 'dark' | 'light') {
-  setItem(KEYS.theme, theme);
-  document.documentElement.setAttribute('data-theme', theme);
+export const ROW_CHOICES = [10, 20, 50] as const;
+export type RowChoice = (typeof ROW_CHOICES)[number];
+
+function initialRows(): RowChoice {
+  const saved = Number(read(KEYS.rows));
+  if ((ROW_CHOICES as readonly number[]).includes(saved)) return saved as RowChoice;
+  const wide = typeof matchMedia === 'function' && matchMedia('(min-width: 900px)').matches;
+  return wide ? 20 : 10;
 }
 
-export function getSavedLowSec(): boolean {
-  const saved = getItem(KEYS.lowsec);
-  return saved !== null ? saved === 'true' : true;
+export type Theme = 'dark' | 'light';
+
+export const theme = signal<Theme>(read(KEYS.theme) === 'light' ? 'light' : 'dark');
+export const nsfw = signal(read(KEYS.nsfw) === 'true');
+export const rowsPerPanel = signal<RowChoice>(initialRows());
+export const collapsed = signal<string[]>(readJsonArray(KEYS.collapsed));
+export const bookmarks = signal<string[]>(normalizeBookmarks(readJsonArray(KEYS.favs)));
+
+export function toggleBookmark(id: string) {
+  const list = bookmarks.value;
+  bookmarks.value = list.includes(id) ? list.filter((b) => b !== id) : [...list, id];
 }
 
-export function setSavedLowSec(enabled: boolean) {
-  setItem(KEYS.lowsec, String(enabled));
+export function toggleCollapsed(sectionId: string) {
+  const list = collapsed.value;
+  collapsed.value = list.includes(sectionId) ? list.filter((s) => s !== sectionId) : [...list, sectionId];
 }
 
-function sanitizeSection(sec: string): string {
-  if (!sec || sec === 'all') return 'all';
-  if (VALID_SECTION_IDS.has(sec)) return sec;
-  if (sec.includes(',')) {
-    const parts = sec.split(',').map(s => s.trim()).filter(s => VALID_SECTION_IDS.has(s) && !['all', 'favorites', 'dead'].includes(s));
-    if (parts.length === 1) return parts[0];
-    if (parts.length > 1) return parts.join(',');
-  }
-  return 'all';
-}
+/** Persist signals and mirror the theme onto <html>. Call once at startup. */
+export function startPersistence() {
+  effect(() => {
+    document.documentElement.setAttribute('data-theme', theme.value);
+    write(KEYS.theme, theme.value);
+  });
+  effect(() => write(KEYS.nsfw, String(nsfw.value)));
+  effect(() => write(KEYS.rows, String(rowsPerPanel.value)));
+  effect(() => write(KEYS.collapsed, JSON.stringify(collapsed.value)));
+  effect(() => write(KEYS.favs, JSON.stringify(bookmarks.value)));
 
-export function getUrlParams() {
-  const search = typeof window !== 'undefined' ? window.location.search : '';
-  const p = new URLSearchParams(search);
-  const lowsec = p.get('lowsec');
-  const rawTags = p.get('tags');
-  const tags = rawTags ? rawTags.split(',').filter(Boolean) : [];
-  return {
-    query: p.get('q') || '',
-    section: sanitizeSection(p.get('section') || 'all'),
-    tags,
-    lowsec: lowsec !== null ? lowsec === 'true' : null
-  };
-}
-
-export function syncUrlParams(
-  query: string,
-  section: string,
-  lowsec: boolean,
-  tags: Set<string> = new Set()
-) {
-  const url = new URL(window.location.href);
-  const setOrDel = (key: string, val: string | null) =>
-    val ? url.searchParams.set(key, val) : url.searchParams.delete(key);
-
-  setOrDel('q', query.trim() || null);
-  setOrDel('section', section && section !== 'all' ? section : null);
-  setOrDel('tags', tags.size > 0 ? Array.from(tags).join(',') : null);
-  setOrDel('lowsec', lowsec ? 'true' : 'false');
-  window.history.replaceState({}, '', url.toString());
+  window.addEventListener('storage', (e) => {
+    if (e.key === KEYS.favs) bookmarks.value = normalizeBookmarks(readJsonArray(KEYS.favs));
+  });
 }

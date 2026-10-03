@@ -11,9 +11,12 @@
     "isolatedModules": true,
     "noEmit": true,
     "strict": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noImplicitReturns": true
+    "noImplicitReturns": true,
+    "types": ["vite/client", "node", "bun-types"]
   },
-  "include": ["src", "functions"]
+  "include": ["src", "functions", "vite.config.ts"]
 }

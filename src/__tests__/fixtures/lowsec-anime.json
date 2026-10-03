@@ -1,0 +1,40 @@
+[
+ {
+  "title": "AnimeParadise",
+  "link": "https://www.animeparadise.moe/",
+  "icon": "https://static.everythingmoe.com/icons/anipara.png",
+  "id": "AnimeParadise",
+  "filter": "Self-host, Simple interface, Soft-sub"
+ },
+ {
+  "title": "Gotaku",
+  "link": "https://gotaku.to/",
+  "icon": "https://static.everythingmoe.com/icons/gotaku.png",
+  "id": "gotaku",
+  "filter": "Self-host, Modern interface, Dub friendly, Hard-sub"
+ },
+ {
+  "title": "Xanime",
+  "link": "https://xanime.me/",
+  "icon": "https://static.everythingmoe.com/icons/xanime.png",
+  "id": "xanime",
+  "filter": "Self-host, Soft-sub"
+ },
+ {
+  "ex-DEAD": "Site shutdown at 23 Apr 2026",
+  "title": "RamenFlix",
+  "link": "https://ramenflix.com/home",
+  "icon": "https://static.everythingmoe.com/icons/ramenflix.png",
+  "tags": "mult",
+  "id": "ramenflix",
+  "filter": "Scraper, Soft-sub"
+ },
+ {
+  "title": "HIDIVE",
+  "link": "https://www.hidive.com/",
+  "icon": "https://static.everythingmoe.com/icons/hidive.png",
+  "tags": "licensed",
+  "id": "hidive",
+  "filter": "Dub friendly, Soft-sub"
+ }
+]

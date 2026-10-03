@@ -1,36 +1,9 @@
-export async function onRequest(context: { request: Request }): Promise<Response> {
-  const url = new URL(context.request.url);
-  const sec = url.searchParams.get('sec') || 'anime';
-  const cleanSec = sec.replace(/[^a-z0-9_-]/gi, '');
+import { cached, json, proxyJson } from '../../src/shared/proxy';
 
-  const upstreamUrls = [
-    `https://everythingmoe.com/lowsec/${cleanSec}.json`,
-    `https://everythingmoe.com/data/lowsec/${cleanSec}.json`
-  ];
+type Ctx = Parameters<typeof cached>[0];
 
-  for (const upstream of upstreamUrls) {
-    try {
-      const res = await fetch(upstream, {
-        headers: {
-          'User-Agent': 'EverythingMoe-Cloudflare-Pages/2.0',
-          'Accept': 'application/json'
-        }
-      });
-      if (res.ok) {
-        const body = await res.text();
-        return new Response(body, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'public, max-age=300, s-maxage=600',
-            'Access-Control-Allow-Origin': '*'
-          }
-        });
-      }
-    } catch {}
-  }
-
-  return new Response(JSON.stringify([]), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
-  });
+export function onRequest(ctx: Ctx): Promise<Response> | Response {
+  const sec = new URL(ctx.request.url).searchParams.get('sec') ?? '';
+  if (!/^[a-z0-9_-]{1,32}$/i.test(sec)) return json({ error: 'Invalid section' }, 400);
+  return cached(ctx, () => proxyJson([`/data/lowsec/${sec}.json`], 600, []));
 }

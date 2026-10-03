@@ -1,71 +1,77 @@
-const CACHE_NAME = 'everythingmoe-v2.0';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.svg'
-];
+const VERSION = 'v3';
+const SHELL = `em-shell-${VERSION}`;
+const DATA = `em-data-${VERSION}`;
+const PRECACHE = ['/', '/manifest.json', '/favicon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    }).then(() => self.skipWaiting())
+    caches
+      .open(SHELL)
+      .then((cache) => cache.addAll(PRECACHE))
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== SHELL && k !== DATA).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
+
+async function networkFirst(request, cacheName, fallbackUrl) {
+  const cache = await caches.open(cacheName);
+  try {
+    const response = await fetch(request);
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  } catch (err) {
+    const hit = (await cache.match(request)) || (fallbackUrl && (await cache.match(fallbackUrl)));
+    if (hit) return hit;
+    throw err;
+  }
+}
+
+async function cacheFirst(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const hit = await cache.match(request);
+  if (hit) return hit;
+  const response = await fetch(request);
+  if (response.ok) cache.put(request, response.clone());
+  return response;
+}
+
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const hit = await cache.match(request);
+  const update = fetch(request)
+    .then((response) => {
+      if (response.ok) cache.put(request, response.clone());
+      return response;
+    })
+    .catch(() => hit);
+  return hit || update;
+}
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-  const url = new URL(event.request.url);
-  const isDataRequest = url.pathname.includes('/api/dataset') || url.pathname.includes('/api/lowsec') || url.pathname.endsWith('dataset.json') || url.pathname.includes('/lowsec/');
+  const { request } = event;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  // Icons and anything else cross-origin go straight to the network and the browser cache.
+  if (url.origin !== self.location.origin) return;
 
-  if (isDataRequest) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request).then((cached) => cached || Promise.reject('offline')))
-    );
-    return;
+  // Health results must always be fresh, otherwise "Recheck" would replay an old answer.
+  if (url.pathname === '/api/health') return;
+
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(networkFirst(request, DATA));
+  } else if (request.mode === 'navigate') {
+    event.respondWith(networkFirst(request, SHELL, '/'));
+  } else if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(cacheFirst(request, SHELL));
+  } else {
+    event.respondWith(staleWhileRevalidate(request, SHELL));
   }
-
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-          }
-        }).catch(() => {});
-        return cachedResponse;
-      }
-      return fetch(event.request).then((response) => {
-        if (response && response.status === 200 && event.request.url.startsWith(self.location.origin)) {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
-        }
-        return response;
-      });
-    })
-  );
 });
-

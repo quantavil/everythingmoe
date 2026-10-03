@@ -1,119 +1,71 @@
-const MODERN_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36';
+import { json } from '../../src/shared/proxy';
 
-const JSON_HEADERS = {
-  'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*',
-  'Cache-Control': 'public, max-age=300, s-maxage=600'
-};
+const UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36';
 
-function jsonResponse(data: Record<string, unknown>, status = 200): Response {
-  return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
-}
-
-function isSafeUrl(targetUrl: URL): boolean {
-  if (targetUrl.protocol !== 'http:' && targetUrl.protocol !== 'https:') return false;
-  const hostname = targetUrl.hostname.toLowerCase();
-  if (hostname === 'localhost' || hostname.endsWith('.local') || hostname.endsWith('.internal')) return false;
-
-  const match = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (match) {
-    const [, a, b] = match.map(Number);
-    if (a === 0 || a === 127 || a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254)) {
-      return false;
-    }
-  }
-
-  if (hostname === '[::1]' || hostname === '::1' || hostname.startsWith('fe80:') || hostname.startsWith('fc00:') || hostname.startsWith('fd00:')) {
-    return false;
-  }
-
+/** Public hostnames only: no IP literals, no single-label or internal names, ports 80/443. */
+export function isSafeUrl(u: URL): boolean {
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+  if (u.username || u.password) return false;
+  if (u.port && u.port !== '80' && u.port !== '443') return false;
+  const host = u.hostname.toLowerCase().replace(/\.$/, '');
+  if (!host.includes('.') || host.includes(':') || host.startsWith('[')) return false;
+  if (/^[\d.]+$/.test(host) || /^0x/i.test(host)) return false;
+  if (/(^|\.)(localhost|local|localdomain|internal|lan|home|corp|intranet|arpa)$/.test(host)) return false;
   return true;
 }
 
-export async function onRequest(context: { request: Request }): Promise<Response> {
-  const urlParam = new URL(context.request.url).searchParams.get('url');
-  if (!urlParam) {
-    return jsonResponse({ error: 'Missing url param' }, 400);
-  }
+export interface Probe {
+  status: 'online' | 'redirected' | 'offline';
+  code?: number;
+  pingMs?: number;
+  redirectHost?: string;
+}
 
-  let targetUrl: URL;
+/** A 403/503 from a CDN challenge page still means the host is alive. */
+export function classify(code: number): boolean {
+  return (code >= 200 && code < 400) || code === 401 || code === 403 || code === 429 || code === 503;
+}
+
+export async function onRequest(context: { request: Request }): Promise<Response> {
+  const raw = new URL(context.request.url).searchParams.get('url');
+  if (!raw) return json({ error: 'Missing url param' }, 400);
+
+  let target: URL;
   try {
-    targetUrl = new URL(urlParam);
-    if (!isSafeUrl(targetUrl)) {
-      return jsonResponse({ error: 'Invalid or restricted URL target' }, 400);
-    }
+    target = new URL(raw);
   } catch {
-    return jsonResponse({ error: 'Invalid or restricted URL target' }, 400);
+    return json({ error: 'Invalid url' }, 400);
   }
+  if (!isSafeUrl(target)) return json({ error: 'URL not allowed' }, 400);
 
   const start = Date.now();
-
-  // 1. Direct Edge probe with modern Chrome 133 User-Agent & manual redirect capture
   try {
-    const res = await fetch(targetUrl.toString(), {
+    const res = await fetch(target.toString(), {
       method: 'GET',
       redirect: 'manual',
-      headers: {
-        'User-Agent': MODERN_USER_AGENT,
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Sec-Ch-Ua': '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"'
-      },
-      signal: AbortSignal.timeout(3500)
+      headers: { 'User-Agent': UA, Accept: 'text/html,*/*;q=0.8' },
+      signal: AbortSignal.timeout(4000)
     });
-
     const pingMs = Date.now() - start;
-    const locationHeader = res.headers.get('location');
-    let redirectUrl: string | undefined;
-    let redirectHost: string | undefined;
-    let isRedirected = false;
+    void res.body?.cancel();
 
-    if (locationHeader) {
+    let redirectHost: string | undefined;
+    const location = res.headers.get('location');
+    if (location) {
       try {
-        const resolved = new URL(locationHeader, targetUrl);
-        redirectUrl = resolved.toString();
-        redirectHost = resolved.hostname;
-        if (redirectHost.toLowerCase() !== targetUrl.hostname.toLowerCase()) {
-          isRedirected = true;
-        }
-      } catch { /* ignore malformed location */ }
-    } else if (res.redirected) {
-      const finalUrl = res.url ? new URL(res.url) : targetUrl;
-      redirectUrl = res.url;
-      redirectHost = finalUrl.hostname;
-      if (finalUrl.hostname.toLowerCase() !== targetUrl.hostname.toLowerCase()) {
-        isRedirected = true;
+        const next = new URL(location, target);
+        if (next.hostname.replace(/^www\./, '') !== target.hostname.replace(/^www\./, '')) redirectHost = next.hostname;
+      } catch {
+        /* malformed Location header */
       }
     }
 
-    if (res.ok || (res.status >= 300 && res.status < 400) || res.status === 403 || res.status === 503) {
-      return jsonResponse({
-        status: isRedirected ? 'redirected' : 'online',
-        pingMs,
-        redirectUrl: isRedirected ? redirectUrl : undefined,
-        redirectHost: isRedirected ? redirectHost : undefined
-      });
-    }
+    const probe: Probe = classify(res.status)
+      ? { status: redirectHost ? 'redirected' : 'online', code: res.status, pingMs, redirectHost }
+      : { status: 'offline', code: res.status };
+    return json(probe, 200, 120);
   } catch {
-    /* Direct edge probe failed / connection reset — try Google S2 Favicon CDN fallback */
+    return json({ status: 'offline' } satisfies Probe, 200, 60);
   }
-
-  // 2. Google S2 Favicon CDN fallback probe
-  try {
-    const favRes = await fetch(`https://www.google.com/s2/favicons?domain=${encodeURIComponent(targetUrl.hostname)}&sz=32`, {
-      signal: AbortSignal.timeout(2500)
-    });
-    if (favRes.ok) {
-      return jsonResponse({
-        status: 'online',
-        pingMs: Date.now() - start
-      });
-    }
-  } catch {
-    /* Fallback failed */
-  }
-
-  return jsonResponse({ status: 'offline' });
 }
-
